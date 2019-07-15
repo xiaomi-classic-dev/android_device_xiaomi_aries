@@ -81,6 +81,7 @@ BOARD_HAVE_BLUETOOTH                        := true
 BOARD_HAVE_BLUETOOTH_QCOM                   := true
 
 # Camera
+TARGET_HAS_LEGACY_CAMERA_HAL1 := true
 BOARD_GLOBAL_CFLAGS                         += -DQCOM_BSP
 USE_DEVICE_SPECIFIC_CAMERA                  := true
 USE_DEVICE_SPECIFIC_QCOM_PROPRIETARY        := true
