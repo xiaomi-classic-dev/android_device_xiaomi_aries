@@ -13,6 +13,7 @@ etc/firmware/voiceproc.img:vendor/firmware/voiceproc.img
 
 # Bluetooth
 bin/hci_qcomm_init:vendor/bin/hci_qcomm_init
+vendor/lib/libaptX_encoder.so|b03772672144d4b750a5672c2922aded93bb0512
 vendor/lib/libbtnv.so
 
 # Camera
