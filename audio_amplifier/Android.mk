@@ -13,9 +13,9 @@ LOCAL_C_INCLUDES += \
 	external/tinycompress/include \
 	$(call include-path-for, audio-route) \
 	$(call include-path-for, audio-effects) \
-	$(call project-path-for,qcom-audio)/hal \
-	$(call project-path-for,qcom-audio)/hal/$(TARGET_BOARD_PLATFORM)/ \
-	$(call project-path-for,qcom-audio)/hal/audio_extn \
+	hardware/qcom/audio/hal \
+	hardware/qcom/audio/hal/$(TARGET_BOARD_PLATFORM)/ \
+	hardware/qcom/audio/hal/audio_extn \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	hardware/libhardware/include
 
