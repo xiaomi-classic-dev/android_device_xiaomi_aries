@@ -1,15 +1,15 @@
 cc_binary {
-    name: "vendor.mokee.touch@1.0-service.aries",
+    name: "vendor.lineage.touch@1.0-service.aries",
     defaults: ["hidl_defaults"],
     relative_install_path: "hw",
-    init_rc: ["vendor.mokee.touch@1.0-service.aries.rc"],
+    init_rc: ["vendor.lineage.touch@1.0-service.aries.rc"],
     srcs: ["service.cpp", "KeyDisabler.cpp"],
     shared_libs: [
         "libbase",
         "libhidlbase",
         "libhidltransport",
         "libutils",
-        "vendor.mokee.touch@1.0",
+        "vendor.lineage.touch@1.0",
     ],
     vendor: true,
 }
