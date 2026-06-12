@@ -18,13 +18,7 @@ cc_library_static {
     name: "libinit_msm8960",
     recovery_available: true,
     srcs: ["init_msm8960.cpp"],
-    header_libs: [
-        "libbase_headers",
-    ],
     include_dirs: [
         "system/core/init",
-    ],
-    static_libs: [
-        "fmtlib",
     ]
 }
