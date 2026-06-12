@@ -1,0 +1,1 @@
+genfscon sysfs /devices/sensor00/fn1a    u:object_r:sysfs_touchscreen:s0
