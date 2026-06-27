@@ -1,0 +1,122 @@
+#!/sbin/sh
+
+ui_print
+ui_print "Xiaomi MI 2 (aries) repartition"
+ui_print "system=2048MiB cache=384MiB"
+ui_print "userdata will be wiped"
+ui_print
+
+fail() {
+  ui_print "ERROR: $*"
+  exit 1
+}
+
+read_sysfs() {
+  cat "$1" 2>/dev/null || echo missing
+}
+
+check_pair() {
+  local label="$1"
+  local got="$2"
+  local want="$3"
+  [ "$got" = "$want" ] || fail "$label expected $want, got $got"
+}
+
+device="$(getprop ro.product.device)"
+build_product="$(getprop ro.build.product)"
+model="$(getprop ro.product.model)"
+
+ui_print "Device: $device / $build_product / $model"
+[ "$device" = "aries" ] || [ "$build_product" = "aries" ] || fail "This package is only for aries"
+
+disk_size="$(read_sysfs /sys/block/mmcblk0/size)"
+case "$disk_size" in
+  ''|*[!0-9]*) fail "Invalid mmcblk0 sector count: $disk_size" ;;
+esac
+
+last_usable=$((disk_size - 34))
+old_userdata_size=$((last_usable - 3538944 + 1))
+new_userdata_size=$((last_usable - 5636096 + 1))
+
+[ "$disk_size" -ge "30777344" ] || fail "Disk is smaller than expected: $disk_size sectors"
+[ "$new_userdata_size" -gt "0" ] || fail "Calculated userdata size is invalid"
+
+p21_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p21/start)"
+p21_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p21/size)"
+p22_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p22/start)"
+p22_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p22/size)"
+p23_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p23/start)"
+p23_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p23/size)"
+
+if [ "$p21_start" = "655360" ] && [ "$p21_size" = "4194304" ] &&
+   [ "$p22_start" = "4849664" ] && [ "$p22_size" = "786432" ] &&
+   [ "$p23_start" = "5636096" ] && [ "$p23_size" = "$new_userdata_size" ]; then
+  fail "Target repartition layout is already present; refusing to wipe again"
+fi
+
+check_pair "system start" "$p21_start" "655360"
+check_pair "system size" "$p21_size" "2097152"
+check_pair "cache start" "$p22_start" "2752512"
+check_pair "cache size" "$p22_size" "786432"
+check_pair "userdata start" "$p23_start" "3538944"
+check_pair "userdata size" "$p23_size" "$old_userdata_size"
+
+package_extract_file "parted" "/tmp/parted"
+chmod 0755 /tmp/parted
+/tmp/parted --version >/tmp/aries-parted-version 2>&1 || fail "parted cannot run"
+
+ui_print "Unmounting partitions"
+umount /system 2>/dev/null
+umount /system_root 2>/dev/null
+umount /cache 2>/dev/null
+umount /sdcard 2>/dev/null
+umount /data 2>/dev/null
+
+ui_print "Writing GPT"
+/tmp/parted /dev/block/mmcblk0 <<EOF
+unit s
+rm 23
+rm 22
+rm 21
+mkpart primary 655360s 4849663s
+name 21 system
+mkpart primary 4849664s 5636095s
+name 22 cache
+mkpart primary 5636096s ${last_usable}s
+name 23 userdata
+quit
+EOF
+
+[ "$?" = "0" ] || fail "parted failed"
+sync
+blockdev --flushbufs /dev/block/mmcblk0 2>/dev/null
+blockdev --rereadpt /dev/block/mmcblk0 2>/dev/null
+sleep 2
+
+ui_print "Verifying new partition table"
+p21_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p21/start)"
+p21_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p21/size)"
+p22_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p22/start)"
+p22_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p22/size)"
+p23_start="$(read_sysfs /sys/block/mmcblk0/mmcblk0p23/start)"
+p23_size="$(read_sysfs /sys/block/mmcblk0/mmcblk0p23/size)"
+
+check_pair "new system start" "$p21_start" "655360"
+check_pair "new system size" "$p21_size" "4194304"
+check_pair "new cache start" "$p22_start" "4849664"
+check_pair "new cache size" "$p22_size" "786432"
+check_pair "new userdata start" "$p23_start" "5636096"
+check_pair "new userdata size" "$p23_size" "$new_userdata_size"
+
+ui_print "Formatting system/cache/userdata"
+make_ext4fs -L system -a system /dev/block/mmcblk0p21 || fail "format system failed"
+make_ext4fs -L cache -a cache /dev/block/mmcblk0p22 || fail "format cache failed"
+make_ext4fs -L data -a data /dev/block/mmcblk0p23 || fail "format userdata failed"
+sync
+
+ui_print
+ui_print "Repartition complete"
+ui_print "Rebooting recovery"
+sleep 3
+reboot recovery
+exit 0
