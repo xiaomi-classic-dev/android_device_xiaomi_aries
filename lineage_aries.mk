@@ -25,6 +25,9 @@ $(call inherit-product, device/xiaomi/aries/aries.mk)
 # Inherit some common Lineage stuff.
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 
+# Keep all locales while making Simplified Chinese the default.
+PRODUCT_LOCALES := zh_CN $(filter-out zh_CN,$(PRODUCT_LOCALES))
+
 PRODUCT_NAME := lineage_aries
 PRODUCT_CHARACTERISTICS := nosdcard
 PRODUCT_DEVICE := aries
