@@ -8,7 +8,7 @@ $(call inherit-product, device/xiaomi/aries/device_aries.mk)
 
 ## Device identifier. This must come after all inclusions
 PRODUCT_DEVICE := aries
-PRODUCT_NAME := aosp_aries
+PRODUCT_NAME := omni_aries
 PRODUCT_BRAND := Xiaomi
 PRODUCT_MODEL := MI 2
 PRODUCT_MANUFACTURER := Xiaomi

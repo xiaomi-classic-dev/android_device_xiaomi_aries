@@ -1,2 +1,1 @@
-add_lunch_combo lineage_aries-eng
-add_lunch_combo lineage_aries-userdebug
+add_lunch_combo aosp_aries-eng
