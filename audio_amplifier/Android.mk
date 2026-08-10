@@ -23,6 +23,8 @@ LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libdl
 
+LOCAL_HEADER_LIBRARIES := libaudio_system_headers
+
 LOCAL_SRC_FILES := audio_amplifier.c
 
 LOCAL_MODULE := audio_amplifier.$(TARGET_BOARD_PLATFORM)
