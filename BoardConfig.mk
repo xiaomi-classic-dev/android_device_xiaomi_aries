@@ -31,8 +31,7 @@ DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/manifest.xml
 BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy
 
 # Init
-TARGET_INIT_VENDOR_LIB := libinit_msm8960
-TARGET_LIBINIT_DEFINES_FILE := $(DEVICE_PATH)/init/init_msm8960.cpp
+$(call soong_config_set,libinit,vendor_init_lib,libinit_msm8960)
 
 # Kernel
 TARGET_KERNEL_CONFIG := aries-perf-user_defconfig
