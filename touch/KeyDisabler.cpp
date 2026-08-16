@@ -18,13 +18,14 @@
 #include <android-base/logging.h>
 #include <android-base/strings.h>
 
+#include <cerrno>
+
 #include "KeyDisabler.h"
 
+namespace aidl {
 namespace vendor {
 namespace lineage {
 namespace touch {
-namespace V1_0 {
-namespace implementation {
 
 constexpr const char kControlPath[] =
     "/proc/touchscreen/disable_keys";
@@ -33,33 +34,35 @@ KeyDisabler::KeyDisabler() {
     mHasKeyDisabler = !access(kControlPath, F_OK);
 }
 
-// Methods from ::vendor::lineage::touch::V1_0::IKeyDisabler follow.
-Return<bool> KeyDisabler::isEnabled() {
+ndk::ScopedAStatus KeyDisabler::getEnabled(bool* _aidl_return) {
     std::string buf;
 
-    if (!mHasKeyDisabler) return false;
+    if (!mHasKeyDisabler) {
+        *_aidl_return = false;
+        return ndk::ScopedAStatus::ok();
+    }
 
     if (!android::base::ReadFileToString(kControlPath, &buf)) {
         LOG(ERROR) << "Failed to read " << kControlPath;
-        return false;
+        return ndk::ScopedAStatus::fromServiceSpecificError(errno);
     }
 
-    return std::stoi(android::base::Trim(buf)) == 0;
+    *_aidl_return = std::stoi(android::base::Trim(buf)) == 0;
+    return ndk::ScopedAStatus::ok();
 }
 
-Return<bool> KeyDisabler::setEnabled(bool enabled) {
-    if (!mHasKeyDisabler) return false;
+ndk::ScopedAStatus KeyDisabler::setEnabled(bool enabled) {
+    if (!mHasKeyDisabler) return ndk::ScopedAStatus::ok();
 
     if (!android::base::WriteStringToFile((enabled ? "1" : "0"), kControlPath)) {
         LOG(ERROR) << "Failed to write " << kControlPath;
-        return false;
+        return ndk::ScopedAStatus::fromServiceSpecificError(errno);
     }
 
-    return true;
+    return ndk::ScopedAStatus::ok();
 }
 
-}  // namespace implementation
-}  // namespace V1_0
 }  // namespace touch
 }  // namespace lineage
 }  // namespace vendor
+}  // namespace aidl

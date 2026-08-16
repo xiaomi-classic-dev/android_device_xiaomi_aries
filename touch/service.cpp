@@ -14,47 +14,30 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "vendor.lineage.touch@1.0-service.aries"
+#define LOG_TAG "vendor.lineage.touch-service.aries"
 
 #include <android-base/logging.h>
-#include <hidl/HidlTransportSupport.h>
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
+
+#include <cstdlib>
+#include <memory>
+#include <string>
 
 #include "KeyDisabler.h"
 
-using android::OK;
-using android::sp;
-using android::status_t;
-using android::hardware::configureRpcThreadpool;
-using android::hardware::joinRpcThreadpool;
-
-using ::vendor::lineage::touch::V1_0::IKeyDisabler;
-using ::vendor::lineage::touch::V1_0::implementation::KeyDisabler;
+using ::aidl::vendor::lineage::touch::KeyDisabler;
 
 int main() {
-    sp<KeyDisabler> keyDisabler;
-    status_t status;
+    ABinderProcess_setThreadPoolMaxThreadCount(0);
+    std::shared_ptr<KeyDisabler> keyDisabler = ndk::SharedRefBase::make<KeyDisabler>();
 
-    keyDisabler = new KeyDisabler();
-    if (keyDisabler == nullptr) {
-        LOG(ERROR) << "Can not create an instance of Touch HAL KeyDisabler Iface, exiting.";
-        goto shutdown;
-    }
-
-    configureRpcThreadpool(1, true /*callerWillJoin*/);
-
-    status = keyDisabler->registerAsService();
-    if (status != OK) {
-        LOG(ERROR) << "Could not register service for Touch HAL KeyDisabler Iface ("
-                   << status << ")";
-        goto shutdown;
-    }
+    const std::string instance = std::string(KeyDisabler::descriptor) + "/default";
+    binder_status_t status =
+            AServiceManager_addService(keyDisabler->asBinder().get(), instance.c_str());
+    CHECK_EQ(status, STATUS_OK) << "Failed to add service " << instance << " " << status;
 
     LOG(INFO) << "Touch HAL Ready.";
-    joinRpcThreadpool();
-    // Should not pass this line
-
-shutdown:
-    // In normal operation, we don't expect the thread pool to shutdown
-    LOG(ERROR) << "Touch HAL service is shutting down.";
-    return 1;
+    ABinderProcess_joinThreadPool();
+    return EXIT_FAILURE;  // should not reach
 }

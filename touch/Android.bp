@@ -1,14 +1,13 @@
 cc_binary {
-    name: "vendor.lineage.touch@1.0-service.aries",
-    defaults: ["hidl_defaults"],
+    name: "vendor.lineage.touch-service.aries",
     relative_install_path: "hw",
     init_rc: ["vendor.lineage.touch@1.0-service.aries.rc"],
     srcs: ["service.cpp", "KeyDisabler.cpp"],
     shared_libs: [
         "libbase",
-        "libhidlbase",
+        "libbinder_ndk",
         "libutils",
-        "vendor.lineage.touch@1.0",
+        "vendor.lineage.touch-V1-ndk",
     ],
     vendor: true,
 }

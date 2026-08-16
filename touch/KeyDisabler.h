@@ -14,33 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef VENDOR_LINEAGE_TOUCH_V1_0_KEYDISABLER_H
-#define VENDOR_LINEAGE_TOUCH_V1_0_KEYDISABLER_H
+#pragma once
 
-#include <vendor/lineage/touch/1.0/IKeyDisabler.h>
+#include <aidl/vendor/lineage/touch/BnKeyDisabler.h>
 
+namespace aidl {
 namespace vendor {
 namespace lineage {
 namespace touch {
-namespace V1_0 {
-namespace implementation {
 
-using ::android::hardware::Return;
-
-class KeyDisabler : public IKeyDisabler {
+class KeyDisabler : public BnKeyDisabler {
   public:
     KeyDisabler();
-    // Methods from ::vendor::lineage::touch::V1_0::IKeyDisabler follow.
-    Return<bool> isEnabled() override;
-    Return<bool> setEnabled(bool enabled) override;
+    ndk::ScopedAStatus getEnabled(bool* _aidl_return) override;
+    ndk::ScopedAStatus setEnabled(bool enabled) override;
+
   private:
     bool mHasKeyDisabler;
 };
 
-}  // namespace implementation
-}  // namespace V1_0
 }  // namespace touch
 }  // namespace lineage
 }  // namespace vendor
-
-#endif  // VENDOR_LINEAGE_TOUCH_V1_0_KEYDISABLER_H
+}  // namespace aidl
