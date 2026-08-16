@@ -16,14 +16,11 @@ LOCAL_C_INCLUDES += \
 	$(call project-path-for,qcom-audio)/hal \
 	$(call project-path-for,qcom-audio)/hal/$(TARGET_BOARD_PLATFORM)/ \
 	$(call project-path-for,qcom-audio)/hal/audio_extn \
-	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	hardware/libhardware/include
-
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libdl
 
-LOCAL_HEADER_LIBRARIES := libaudio_system_headers
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers libaudio_system_headers
 
 LOCAL_SRC_FILES := audio_amplifier.c
 
