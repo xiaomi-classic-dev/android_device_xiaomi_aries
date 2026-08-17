@@ -31,6 +31,9 @@ $(call inherit-product, device/xiaomi/aries/aries.mk)
 # Inherit some common Lineage stuff.
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 
+# Linux 3.4 has no EROFS support, so keep preinstalled APEX payloads on ext4.
+PRODUCT_DEFAULT_APEX_PAYLOAD_TYPE := ext4
+
 # Keep all locales while making Simplified Chinese the default.
 PRODUCT_LOCALES := zh_CN $(filter-out zh_CN,$(PRODUCT_LOCALES))
 
