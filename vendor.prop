@@ -1,2 +1,6 @@
 # Keep the original shipping API visible on the legacy combined system image.
 ro.product.first_api_level=16
+
+# Android 12 rild uses the vendor property namespace.
+vendor.rild.libpath=/vendor/lib/libril-qc-qmi-1.so
+vendor.rild.libargs=-d /dev/smd0
