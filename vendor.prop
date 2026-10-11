@@ -1,0 +1,2 @@
+# Keep the original shipping API visible on the legacy combined system image.
+ro.product.first_api_level=16
