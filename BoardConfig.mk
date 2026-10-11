@@ -24,6 +24,10 @@ TARGET_OTA_ASSERT_DEVICE := aries
 # Bootloader
 TARGET_BOOTLOADER_NAME       := aries
 
+# ART needs a primary boot image for on-device app compilation.
+WITH_DEXPREOPT := true
+WITH_DEXPREOPT_BOOT_IMG_AND_SYSTEM_SERVER_ONLY := true
+
 # HIDL
 DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/manifest.xml
 
