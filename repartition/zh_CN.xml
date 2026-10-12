@@ -11,7 +11,7 @@
   <string name="aries_data">调整后 Data 约：%aries_data_mib% MiB</string>
   <string name="aries_cache">Cache 容量保持：%aries_cache% MiB</string>
   <string name="aries_journal">分区表备份：Persist/.aries-repartition</string>
-  <string name="aries_flow">重启 Recovery，完成格式化，再刷入 ROM。</string>
+  <string name="aries_flow">重启 Recovery 后自动完成格式化，再刷入 ROM。</string>
   <string name="aries_continue">继续：确认全部数据丢失</string>
   <string name="aries_finish">重启 Recovery 后完成格式化</string>
   <string name="aries_repair">继续修复未完成的分区表更新</string>

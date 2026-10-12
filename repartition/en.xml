@@ -11,7 +11,7 @@
   <string name="aries_data">Remaining Data: about %aries_data_mib% MiB</string>
   <string name="aries_cache">Cache keeps its size: %aries_cache% MiB</string>
   <string name="aries_journal">GPT backup: Persist/.aries-repartition</string>
-  <string name="aries_flow">Reboot Recovery, finish formatting, then install a ROM.</string>
+  <string name="aries_flow">Recovery reboots and completes formatting, then install a ROM.</string>
   <string name="aries_continue">Continue to data-loss confirmation</string>
   <string name="aries_finish">Finish formatting after Recovery reboot</string>
   <string name="aries_repair">Resume interrupted GPT update</string>
