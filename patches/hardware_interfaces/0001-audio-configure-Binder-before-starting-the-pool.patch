@@ -1,0 +1,38 @@
+From 5c620859e8b2ad353384b6155b1874c680015b23 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 12 Oct 2026 22:13:24 +0800
+Subject: [PATCH] audio: configure the legacy Binder pool before starting it
+
+The legacy vndbinder initialization starts the shared ProcessState pool
+before the new NDK audio service initialization requests one thread.
+Android 13 prohibits shrinking a running Binder pool, causing a fatal
+"Binder threadpool cannot be shrunk after starting" assertion.
+
+Keep the vndbinder driver initialization and let the existing NDK
+sequence set the maximum thread count before starting the pool.
+The later startThreadPool call uses the same ProcessState and replaces
+the redundant early start without changing the HIDL pool setup.
+
+Change-Id: Iaa03ae5097d9dabd6e4a58dc30718cc5ab430b56
+---
+ audio/common/all-versions/default/service/service.cpp | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/audio/common/all-versions/default/service/service.cpp b/audio/common/all-versions/default/service/service.cpp
+index fbf616563..54008cec0 100644
+--- a/audio/common/all-versions/default/service/service.cpp
++++ b/audio/common/all-versions/default/service/service.cpp
+@@ -76,9 +76,7 @@ int main(int /* argc */, char* /* argv */ []) {
+     signal(SIGPIPE, SIG_IGN);
+ 
+     ::android::ProcessState::initWithDriver("/dev/vndbinder");
+-    // start a threadpool for vndbinder interactions
+-    ::android::ProcessState::self()->startThreadPool();
+-
++    // Configure the shared Binder pool before either API starts it.
+     ABinderProcess_setThreadPoolMaxThreadCount(1);
+     ABinderProcess_startThreadPool();
+ 
+-- 
+2.53.0
+
