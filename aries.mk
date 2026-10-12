@@ -14,6 +14,9 @@ PRODUCT_SHIPPING_API_LEVEL := 16
 # System properties
 -include $(DEVICE_PATH)/system_prop.mk
 
+# Retain the WebView version validated with the legacy Adreno driver.
+PRODUCT_PACKAGES += aries_webview
+
 # Audio
 PRODUCT_PACKAGES += \
     audio_amplifier.msm8960
