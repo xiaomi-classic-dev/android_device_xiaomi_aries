@@ -36,6 +36,16 @@ reset = ET.SubElement(advanced, 'action')
 ET.SubElement(reset, 'action', function='set').text = 'aries_advanced_selection=0'
 for page in extension.find('pages'):
     pages.append(page)
+# A failed or interrupted startup resume must lead to the device repair page,
+# rather than a normal home screen whose storage entries are unavailable.
+main = next(p for p in pages if p.get('name') == 'main2')
+redirect = ET.SubElement(main, 'action')
+ET.SubElement(redirect, 'condition', var1='property.aries.resize.ready', var2='0')
+ET.SubElement(redirect, 'condition', var1='aries_startup_redirected', var2='0')
+actions = ET.SubElement(redirect, 'actions')
+ET.SubElement(actions, 'action', function='set').text = 'aries_startup_redirected=1'
+ET.SubElement(actions, 'action', function='set').text = 'aries_probing=1'
+ET.SubElement(actions, 'action', function='page').text = 'aries_resize'
 # apply uses a size argument; finish/repair/restore do not.
 work = next(p for p in pages if p.get('name') == 'aries_work')
 base = next(n for n in work if n.tag == 'action' and n.find('actions') is not None)
@@ -54,6 +64,7 @@ variables = ui.getroot().find('variables')
 for name, value in [('aries_system_mib', minimum), ('aries_confirm', ''),
                     ('aries_ready', '0'), ('aries_installed', '0'), ('aries_finish', '0'), ('aries_repair', '0'),
                     ('aries_probing', '0'),
+                    ('aries_startup_redirected', '0'),
                     ('aries_restore', '0'), ('aries_mode', 'apply'), ('aries_run', '0')]:
     ET.SubElement(variables, 'variable', name=name, value=value)
 save(ui, ui_path)
