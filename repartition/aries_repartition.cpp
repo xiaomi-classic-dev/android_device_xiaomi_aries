@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <linux/fs.h>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -36,9 +35,19 @@ static std::string diskPath = "/dev/block/mmcblk0", storeRoot = "/tmp/aries-resi
 static std::string cid, journalDir;
 static bool testing = false;
 static unsigned writeStep = 0;
+static void property(const std::string &key, const std::string &value);
 static void need(bool b, const std::string &s) {
-    if (!b)
-        throw std::runtime_error(s);
+    if (b)
+        return;
+    // Static ARM Recovery tools cannot rely on C++ exception unwinding.
+    // Publish the failure directly; exit closes all file descriptors.
+    fprintf(stderr, "Aries repartition: %s\n", s.c_str());
+    property("ready", "0");
+    property("finish", "0");
+    property("repair", "0");
+    property("restore", "0");
+    property("error", s);
+    exit(1);
 }
 static uint32_t u32(const Bytes &b, size_t p) {
     need(p + 4 <= b.size(), "truncated integer");
@@ -95,6 +104,15 @@ static void property(const std::string &key, const std::string &value) {
 #endif
 }
 #ifndef ARIES_TEST
+static uint64_t decimal(const std::string &s) {
+    need(!s.empty() && s.find_first_not_of("0123456789") == std::string::npos,
+         "invalid kernel partition geometry");
+    errno = 0;
+    char *end = nullptr;
+    uint64_t value = strtoull(s.c_str(), &end, 10);
+    need(errno != ERANGE && end && !*end, "kernel partition geometry overflow");
+    return value;
+}
 static std::string textFile(const std::string &p) {
     FD f(open(p.c_str(), O_RDONLY | O_NOFOLLOW));
     std::string out;
@@ -314,13 +332,14 @@ static void mountedStore(bool writable) {
         need(mkdir(storeRoot.c_str(), 0700) == 0, "cannot create journal mountpoint");
     else
         need(S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode), "invalid journal mountpoint");
-    std::string mounts = textFile("/proc/mounts");
+    // /proc/mounts is a symlink; textFile deliberately uses O_NOFOLLOW.
+    std::string mounts = textFile("/proc/self/mounts");
     std::istringstream lines(mounts);
     std::string source, at, type, opts, line;
     bool found = false;
     struct stat persist;
-    need(std::stoull(textFile("/sys/class/block/mmcblk0p20/start")) == 638976 &&
-             std::stoull(textFile("/sys/class/block/mmcblk0p20/size")) == 16384,
+    need(decimal(textFile("/sys/class/block/mmcblk0p20/start")) == 638976 &&
+             decimal(textFile("/sys/class/block/mmcblk0p20/size")) == 16384,
          "Persist kernel geometry differs");
     need(stat("/dev/block/mmcblk0p20", &persist) == 0 && S_ISBLK(persist.st_mode),
          "Persist missing");
@@ -364,7 +383,7 @@ static void unmounted() {
     for (unsigned i = 0; i < 3; ++i)
         need(!stat(("/dev/block/mmcblk0p" + std::to_string(21 + i)).c_str(), &dev[i]),
              "missing resize partition");
-    std::istringstream mounts(textFile("/proc/mounts"));
+    std::istringstream mounts(textFile("/proc/self/mounts"));
     std::string line;
     while (std::getline(mounts, line)) {
         std::istringstream in(line);
@@ -548,8 +567,8 @@ static void geometry(const Table &t) {
 #ifndef ARIES_TEST
     for (unsigned i = 20; i < 23; ++i) {
         std::string path = "/sys/class/block/mmcblk0p" + std::to_string(i + 1);
-        need(std::stoull(textFile(path + "/start")) == first(t, i) &&
-                 std::stoull(textFile(path + "/size")) == length(t, i),
+        need(decimal(textFile(path + "/start")) == first(t, i) &&
+                 decimal(textFile(path + "/size")) == length(t, i),
              "reboot Recovery before formatting: kernel partition geometry is stale");
     }
 #else
@@ -652,109 +671,99 @@ static void probe(int fd, uint64_t sectors) {
         property("error", "Flash this Recovery before resizing; temporary boot is preview only.");
 }
 int main(int argc, char **argv) {
-    try {
-        int at = 1;
+    int at = 1;
 #ifdef ARIES_TEST
-        need(argc >= 5 && std::string(argv[1]) == "--image" && std::string(argv[3]) == "--store",
-             "host test requires --image PATH --store DIR");
-        diskPath = argv[2];
-        storeRoot = argv[4];
-        at = 5;
-        testing = true;
-        cid = "0123456789abcdef0123456789abcdef";
-        const char *testCid = getenv("ARIES_TEST_CID");
-        if (testCid)
-            cid = testCid;
+    need(argc >= 5 && std::string(argv[1]) == "--image" && std::string(argv[3]) == "--store",
+         "host test requires --image PATH --store DIR");
+    diskPath = argv[2];
+    storeRoot = argv[4];
+    at = 5;
+    testing = true;
+    cid = "0123456789abcdef0123456789abcdef";
+    const char *testCid = getenv("ARIES_TEST_CID");
+    if (testCid)
+        cid = testCid;
 #endif
-        (void)testing;
-        need(argc > at, "usage: probe | plan MiB | apply MiB yes | finish/repair/restore yes");
-        std::string command = argv[at];
-        bool write = command == "apply" || command == "finish" || command == "repair" ||
-                     command == "restore";
-        need(command == "probe" || command == "plan" || write, "unknown command");
-        if (write) {
-            need(argc == at + (command == "apply" ? 3 : 2), "invalid command arguments");
-            affirmative(argv[argc - 1]);
-        } else
-            need(argc == at + (command == "plan" ? 2 : 1), "invalid command arguments");
-        environment();
-        FD lock(open((testing ? storeRoot + "/tool.lock" : "/tmp/aries-repartition.lock").c_str(),
-                     O_RDWR | O_CREAT | O_NOFOLLOW, 0600));
-        need(!flock(lock.n, LOCK_EX | LOCK_NB), "another partition operation is running");
-        FD disk(open(diskPath.c_str(), (write ? O_RDWR : O_RDONLY) | O_NOFOLLOW));
-        uint64_t sectors = diskSize(disk.n);
-        Bytes mbr = readAt(disk.n, 0, 512);
-        need(mbr[510] == 0x55 && mbr[511] == 0xaa && mbr[450] == 0xee, "not a protective GPT disk");
-        if (command == "plan") {
-            printPlan(plan(current(disk.n, sectors), target(argv[at + 1])));
-            return 0;
-        }
-        if (command == "apply")
-            need(recoveryInstalled(),
-                 "Flash this Recovery before resizing; temporary boot is preview only.");
-        mountedStore(write);
-        if (command == "probe") {
-            probe(disk.n, sectors);
-            return 0;
-        }
-        unmounted();
+    (void)testing;
+    need(argc > at, "usage: probe | plan MiB | apply MiB yes | finish/repair/restore yes");
+    std::string command = argv[at];
+    bool write = command == "apply" || command == "finish" || command == "repair" ||
+                 command == "restore";
+    need(command == "probe" || command == "plan" || write, "unknown command");
+    if (write) {
+        need(argc == at + (command == "apply" ? 3 : 2), "invalid command arguments");
+        affirmative(argv[argc - 1]);
+    } else
+        need(argc == at + (command == "plan" ? 2 : 1), "invalid command arguments");
+    environment();
+    FD lock(open((testing ? storeRoot + "/tool.lock" : "/tmp/aries-repartition.lock").c_str(),
+                 O_RDWR | O_CREAT | O_NOFOLLOW, 0600));
+    need(!flock(lock.n, LOCK_EX | LOCK_NB), "another partition operation is running");
+    FD disk(open(diskPath.c_str(), (write ? O_RDWR : O_RDONLY) | O_NOFOLLOW));
+    uint64_t sectors = diskSize(disk.n);
+    Bytes mbr = readAt(disk.n, 0, 512);
+    need(mbr[510] == 0x55 && mbr[511] == 0xaa && mbr[450] == 0xee, "not a protective GPT disk");
+    if (command == "plan") {
+        printPlan(plan(current(disk.n, sectors), target(argv[at + 1])));
+        return 0;
+    }
+    if (command == "apply")
+        need(recoveryInstalled(),
+             "Flash this Recovery before resizing; temporary boot is preview only.");
+    mountedStore(write);
+    if (command == "probe") {
+        probe(disk.n, sectors);
+        return 0;
+    }
+    unmounted();
 #ifndef ARIES_TEST
-        need(access("/sbin/make_ext4fs", X_OK) == 0, "required formatter missing");
+    need(access("/sbin/make_ext4fs", X_OK) == 0, "required formatter missing");
 #endif
-        if (command == "apply") {
-            if (exists(journalDir + "/journal.bin"))
-                need(loadJournal(disk.n, sectors).phase == 4,
-                     "unfinished operation: finish, repair or restore it first");
-            Table old = current(disk.n, sectors), next = plan(old, target(argv[at + 1]));
-            need(!equal(old, next), "selected size is unchanged; nothing was erased");
-            struct statvfs v;
-            need(!statvfs(storeRoot.c_str(), &v) && uint64_t(v.f_bavail) * v.f_frsize >= 512 * 1024,
-                 "not enough journal space");
-            Journal j{1, target(argv[at + 1]), old, next, mbr};
+    if (command == "apply") {
+        if (exists(journalDir + "/journal.bin"))
+            need(loadJournal(disk.n, sectors).phase == 4,
+                 "unfinished operation: finish, repair or restore it first");
+        Table old = current(disk.n, sectors), next = plan(old, target(argv[at + 1]));
+        need(!equal(old, next), "selected size is unchanged; nothing was erased");
+        struct statvfs v;
+        need(!statvfs(storeRoot.c_str(), &v) && uint64_t(v.f_bavail) * v.f_frsize >= 512 * 1024,
+             "not enough journal space");
+        Journal j{1, target(argv[at + 1]), old, next, mbr};
+        atomicFile(journalDir + "/journal.bin", journalBytes(j));
+        (void)loadJournal(disk.n, sectors);
+        recoverable(disk.n, j);
+        writeTable(disk.n, next);
+        j.phase = 2;
+        atomicFile(journalDir + "/journal.bin", journalBytes(j));
+        property("phase", "reboot");
+        puts("GPT updated. Reboot Recovery, then finish formatting System/Cache/Data. Do not "
+             "boot Android yet.");
+    } else {
+        Journal j = loadJournal(disk.n, sectors);
+        need(j.phase != 4, "no unfinished repartition operation");
+        recoverable(disk.n, j);
+        if (command == "finish") {
+            need(diskMatches(disk.n, j.next), "partition table incomplete; repair it first");
+            geometry(j.next);
+            j.phase = 3;
             atomicFile(journalDir + "/journal.bin", journalBytes(j));
-            (void)loadJournal(disk.n, sectors);
-            recoverable(disk.n, j);
-            writeTable(disk.n, next);
-            j.phase = 2;
+            format(j.next);
+            j.phase = 4;
+            atomicFile(journalDir + "/journal.bin", journalBytes(j));
+            property("phase", "complete");
+            puts("New physical partitions formatted. Install a ROM before booting Android.");
+        } else {
+            const Table &desired = command == "restore" ? j.old : j.next;
+            writeTable(disk.n, desired);
+            j.phase = command == "restore" ? 4 : 2;
             atomicFile(journalDir + "/journal.bin", journalBytes(j));
             property("phase", "reboot");
-            puts("GPT updated. Reboot Recovery, then finish formatting System/Cache/Data. Do not "
-                 "boot Android yet.");
-        } else {
-            Journal j = loadJournal(disk.n, sectors);
-            need(j.phase != 4, "no unfinished repartition operation");
-            recoverable(disk.n, j);
-            if (command == "finish") {
-                need(diskMatches(disk.n, j.next), "partition table incomplete; repair it first");
-                geometry(j.next);
-                j.phase = 3;
-                atomicFile(journalDir + "/journal.bin", journalBytes(j));
-                format(j.next);
-                j.phase = 4;
-                atomicFile(journalDir + "/journal.bin", journalBytes(j));
-                property("phase", "complete");
-                puts("New physical partitions formatted. Install a ROM before booting Android.");
-            } else {
-                const Table &desired = command == "restore" ? j.old : j.next;
-                writeTable(disk.n, desired);
-                j.phase = command == "restore" ? 4 : 2;
-                atomicFile(journalDir + "/journal.bin", journalBytes(j));
-                property("phase", "reboot");
-                puts(command == "restore"
-                         ? "Previous GPT restored; filesystem contents are not restored. Reboot "
-                           "Recovery."
-                         : "Pending GPT repaired. Reboot Recovery before formatting.");
-            }
+            puts(command == "restore"
+                     ? "Previous GPT restored; filesystem contents are not restored. Reboot "
+                       "Recovery."
+                     : "Pending GPT repaired. Reboot Recovery before formatting.");
         }
-        property("error", "");
-        return 0;
-    } catch (const std::exception &e) {
-        fprintf(stderr, "Aries repartition: %s\n", e.what());
-        property("ready", "0");
-        property("finish", "0");
-        property("repair", "0");
-        property("restore", "0");
-        property("error", e.what());
-        return 1;
     }
+    property("error", "");
+    return 0;
 }

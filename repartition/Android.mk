@@ -5,7 +5,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
 LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 LOCAL_SRC_FILES := aries_repartition.cpp
-LOCAL_CPPFLAGS := -std=c++11 -fexceptions -Wall -Wextra -Werror
+LOCAL_CPPFLAGS := -std=c++11 -fno-exceptions -Wall -Wextra -Werror
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_PACK_MODULE_RELOCATIONS := false
 LOCAL_CXX_STL := libc++_static
