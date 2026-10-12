@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='utf-8'?>
+<aries>
+  <listitem name="{@aries_resize=Aries System / Data size}">
+    <actions>
+      <action function="cmd">/sbin/aries-repartition probe</action>
+      <action function="set">aries_phase=%property.aries.resize.phase%</action>
+      <action function="set">aries_installed=%property.aries.resize.installed%</action>
+      <action function="set">aries_ready=%property.aries.resize.ready%</action>
+      <action function="set">aries_finish=%property.aries.resize.finish%</action>
+      <action function="set">aries_repair=%property.aries.resize.repair%</action>
+      <action function="set">aries_restore=%property.aries.resize.restore%</action>
+      <action function="set">aries_current=%property.aries.resize.current%</action>
+      <action function="set">aries_system_mib=%property.aries.resize.current%</action>
+      <action function="set">aries_cache=%property.aries.resize.cache%</action>
+      <action function="set">aries_data_mib=%property.aries.resize.data%</action>
+      <action function="set">aries_error=%property.aries.resize.error%</action>
+      <action function="page">aries_resize</action>
+    </actions>
+  </listitem>
+  <pages>
+    <page name="aries_resize">
+      <template name="page" />
+      <text style="text_l">
+        <placement x="%col1_x_header%" y="%row3_header_y%" />
+        <text>{@aries_resize=Aries System / Data size}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row2_y%" />
+        <text>{@aries_erase1=WARNING: System, Cache and ALL Data will be erased!}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row3_y%" />
+        <text>{@aries_erase2=Includes apps, internal photos, videos and backups.}</text>
+      </text>
+      <text style="text_m">
+        <placement x="%indent%" y="%row5_y%" />
+        <text>{@aries_current=Current System: %aries_current% MiB}</text>
+        <condition var1="aries_ready" var2="1" />
+      </text>
+      <text style="text_m">
+        <condition var1="aries_restore" var2="1" />
+        <placement x="%indent%" y="%row5_y%" />
+        <text>{@aries_pending=Pending System target: %aries_current% MiB}</text>
+      </text>
+      <text style="text_m">
+        <placement x="%indent%" y="%row6_y%" />
+        <text>{@aries_range=Factory: @MIN_MIB@ MiB; max: @MAX_MIB@ MiB (3 GiB)}</text>
+      </text>
+      <slidervalue style="slidervalue">
+        <condition var1="aries_ready" var2="1" />
+        <placement x="%indent%" y="%row8_y%" w="%content_width%" />
+        <text>{@aries_target=New System size (MiB):}</text>
+        <data variable="aries_system_mib" min="@MIN_MIB@" max="@MAX_MIB@" showrange="1" showcurr="1" changeondrag="1" />
+        <actions>
+          <action function="set">aries_data_mib=%property.aries.resize.budget%</action>
+          <action function="compute">aries_data_mib-%aries_system_mib%</action>
+        </actions>
+      </slidervalue>
+      <text style="text_m">
+        <placement x="%indent%" y="%row12_y%" />
+        <text>{@aries_data=Remaining Data: about %aries_data_mib% MiB}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row13_y%" />
+        <text>{@aries_cache=Cache keeps its size: %aries_cache% MiB}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row14_y%" />
+        <text>{@aries_journal=GPT backup: Persist/.aries-repartition}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row15_y%" />
+        <text>{@aries_flow=Reboot Recovery, finish formatting, then install a ROM.}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row17_y%" />
+        <text>%aries_error%</text>
+      </text>
+      <button style="main_button_half_height_full_width">
+        <condition var1="aries_ready" var2="1" />
+        <placement x="%indent%" y="%row19_y%" />
+        <text>{@aries_continue=Continue to data-loss confirmation}</text>
+        <actions>
+          <action function="set">aries_mode=apply</action>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_confirm</action>
+        </actions>
+        <condition var1="aries_installed" var2="1" />
+      </button>
+      <button style="main_button_half_height_full_width">
+        <condition var1="aries_finish" var2="1" />
+        <placement x="%indent%" y="%row8_y%" />
+        <text>{@aries_finish=Finish formatting after Recovery reboot}</text>
+        <actions>
+          <action function="set">aries_mode=finish</action>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_confirm</action>
+        </actions>
+      </button>
+      <button style="main_button_half_height_full_width">
+        <condition var1="aries_repair" var2="1" />
+        <placement x="%indent%" y="%row8_y%" />
+        <text>{@aries_repair=Resume interrupted GPT update}</text>
+        <actions>
+          <action function="set">aries_mode=repair</action>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_confirm</action>
+        </actions>
+      </button>
+      <button style="main_button_half_height_full_width">
+        <condition var1="aries_restore" var2="1" />
+        <placement x="%indent%" y="%row10_y%" />
+        <text>{@aries_restore=Restore previous GPT only (not files)}</text>
+        <actions>
+          <action function="set">aries_mode=restore</action>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_confirm</action>
+        </actions>
+      </button>
+      <action>
+        <touch key="back" />
+        <action function="page">advanced</action>
+      </action>
+      <action>
+        <touch key="home" />
+        <action function="page">main</action>
+      </action>
+      <text style="text_s">
+        <placement x="%indent%" y="%row16_y%" />
+        <text>{@aries_rom_capacity=Choose enough System space for the ROM to install.}</text>
+      </text>
+    </page>
+    <page name="aries_confirm">
+      <template name="page" />
+      <text style="text_l">
+        <placement x="%col1_x_header%" y="%row3_header_y%" />
+        <text>{@aries_danger=Destructive partition operation}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row2_y%" />
+        <text>{@aries_erase1=WARNING: System, Cache and ALL Data will be erased!}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row3_y%" />
+        <text>{@aries_erase2=Includes apps, internal photos, videos and backups.}</text>
+      </text>
+      <text style="text_m">
+        <placement x="%indent%" y="%row4_y%" />
+        <text>{@aries_backup=Back up personal files to a PC or USB OTG FIRST.}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row5_y%" />
+        <text>{@aries_not_files=GPT backup cannot recover erased files.}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row6_y%" />
+        <text>{@aries_power=Keep power stable; interruptions require Recovery repair.}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row7_y%" />
+        <text>{@aries_flow=Reboot Recovery, finish formatting, then install a ROM.}</text>
+      </text>
+      <text style="text_m">
+        <placement x="%indent%" y="%row8_y%" />
+        <text>{@aries_yes=Type exactly yes, then press the keyboard check.}</text>
+      </text>
+      <input>
+        <placement x="%indent%" y="%row10_y%" w="%content_width%" h="%input_height%" />
+        <text>%aries_confirm%</text>
+        <data name="aries_confirm" />
+        <restrict minlen="3" maxlen="3" allow="yes" />
+        <action function="page">aries_gate</action>
+      </input>
+      <template name="keyboardtemplate" />
+      <action>
+        <touch key="back" />
+        <actions>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_resize</action>
+        </actions>
+      </action>
+      <action>
+        <touch key="home" />
+        <actions>
+          <action function="set">aries_confirm=</action>
+          <action function="page">main</action>
+        </actions>
+      </action>
+    </page>
+    <page name="aries_gate">
+      <action>
+        <condition var1="aries_confirm" var2="yes" />
+        <actions>
+          <action function="set">aries_run=1</action>
+          <action function="page">aries_work</action>
+        </actions>
+      </action>
+      <action>
+        <condition var1="aries_confirm" op="!=" var2="yes" />
+        <action function="page">aries_confirm</action>
+      </action>
+    </page>
+    <page name="aries_work">
+      <template name="page" />
+      <text style="text_l">
+        <placement x="%col1_x_header%" y="%row3_header_y%" />
+        <text>{@aries_work=Updating physical partitions...}</text>
+      </text>
+      <text style="text_m_fail">
+        <placement x="%indent%" y="%row2_y%" />
+        <text>{@aries_power=Keep power stable; interruptions require Recovery repair.}</text>
+      </text>
+      <template name="console" />
+      <template name="progress_bar" />
+      <action>
+        <condition var1="aries_run" var2="1" />
+        <condition var1="aries_confirm" var2="yes" />
+        <actions>
+          <action function="set">aries_run=0</action>
+          <action function="stopmtp" />
+          <action function="unmount">/system</action>
+          <action function="unmount">/data</action>
+          <action function="unmount">/cache</action>
+          <action function="cmd">/sbin/aries-repartition %aries_mode% %aries_confirm%</action>
+          <action function="set">aries_phase=%property.aries.resize.phase%</action>
+          <action function="set">aries_error=%property.aries.resize.error%</action>
+          <action function="set">aries_confirm=</action>
+          <action function="page">aries_result</action>
+        </actions>
+      </action>
+    </page>
+    <page name="aries_result">
+      <template name="page" />
+      <text style="text_l">
+        <placement x="%col1_x_header%" y="%row3_header_y%" />
+        <text>{@aries_resize=Aries System / Data size}</text>
+      </text>
+      <text style="text_m_fail">
+        <condition var1="tw_operation_status" op="!=" var2="0" />
+        <placement x="%indent%" y="%row2_y%" />
+        <text>{@aries_failed=Operation failed. Read the log; do not boot Android.}</text>
+      </text>
+      <text style="text_m">
+        <condition var1="aries_phase" var2="complete" />
+        <placement x="%indent%" y="%row2_y%" />
+        <text>{@aries_complete=Formatting complete. Install a ROM before booting Android.}</text>
+      </text>
+      <text style="text_s">
+        <placement x="%indent%" y="%row4_y%" />
+        <text>%aries_error%</text>
+      </text>
+      <button style="main_button_half_height_full_width">
+        <placement x="%indent%" y="%row8_y%" />
+        <text>{@reboot_recovery_btn=Reboot Recovery}</text>
+        <action function="reboot">recovery</action>
+      </button>
+      <button style="main_button_half_height_full_width">
+        <placement x="%indent%" y="%row10_y%" />
+        <text>{@back_btn=Back}</text>
+        <action function="page">advanced</action>
+      </button>
+      <action>
+        <condition var1="aries_phase" var2="reboot" />
+        <action function="reboot">recovery</action>
+      </action>
+    </page>
+  </pages>
+</aries>

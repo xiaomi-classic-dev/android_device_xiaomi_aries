@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="aries_resize">Aries System / Data size</string>
+  <string name="aries_erase1">WARNING: System, Cache and ALL Data will be erased!</string>
+  <string name="aries_erase2">Includes apps, internal photos, videos and backups.</string>
+  <string name="aries_current">Current System: %aries_current% MiB</string>
+  <string name="aries_range">Factory: @MIN_MIB@ MiB; max: @MAX_MIB@ MiB (3 GiB)</string>
+  <string name="aries_target">New System size (MiB):</string>
+  <string name="aries_data">Remaining Data: about %aries_data_mib% MiB</string>
+  <string name="aries_cache">Cache keeps its size: %aries_cache% MiB</string>
+  <string name="aries_journal">GPT backup: Persist/.aries-repartition</string>
+  <string name="aries_flow">Reboot Recovery, finish formatting, then install a ROM.</string>
+  <string name="aries_continue">Continue to data-loss confirmation</string>
+  <string name="aries_finish">Finish formatting after Recovery reboot</string>
+  <string name="aries_repair">Resume interrupted GPT update</string>
+  <string name="aries_restore">Restore previous GPT only (not files)</string>
+  <string name="aries_danger">Destructive partition operation</string>
+  <string name="aries_backup">Back up personal files to a PC or USB OTG FIRST.</string>
+  <string name="aries_not_files">GPT backup cannot recover erased files.</string>
+  <string name="aries_power">Keep power stable; interruptions require Recovery repair.</string>
+  <string name="aries_yes">Type exactly yes, then press the keyboard check.</string>
+  <string name="aries_work">Updating physical partitions...</string>
+  <string name="aries_failed">Operation failed. Read the log; do not boot Android.</string>
+  <string name="aries_complete">Formatting complete. Install a ROM before booting Android.</string>
+  <string name="aries_pending">Pending System target: %aries_current% MiB</string>
+  <string name="aries_rom_capacity">Choose enough System space for the ROM to install.</string>
+</resources>

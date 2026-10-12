@@ -18,7 +18,7 @@ ARCH_ARM_HAVE_TLS_REGISTER := true
 
 TARGET_BOOTLOADER_BOARD_NAME := MSM8960
 
-BOARD_KERNEL_CMDLINE := console=ttyHSL0,115200,n8 androidboot.hardware=aries lpj=67677 user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3 lge.kcal=0|0|0|x
+BOARD_KERNEL_CMDLINE := console=ttyHSL0,115200,n8 androidboot.hardware=aries lpj=67677 user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3 lge.kcal=0|0|0|x androidboot.ariesresize=1
 BOARD_KERNEL_BASE := 0x80200000
 BOARD_KERNEL_PAGESIZE := 2048
 BOARD_MKBOOTIMG_ARGS := --ramdisk_offset 0x02000000
@@ -60,3 +60,6 @@ BOARD_SUPPRESS_EMMC_WIPE                := true
 RECOVERY_SDCARD_ON_DATA                 := true
 TW_EXTRA_LANGUAGES                      := true
 
+# Aries merged GPT physical System/Cache/Data resizing; generated device UI.
+TARGET_RECOVERY_DEVICE_MODULES += aries-repartition
+BOARD_RECOVERY_IMAGE_PREPARE = python device/xiaomi/aries/repartition/prepare-theme.py bootable/recovery/gui/theme/common/portrait.xml $(TARGET_RECOVERY_ROOT_OUT) device/xiaomi/aries/repartition
