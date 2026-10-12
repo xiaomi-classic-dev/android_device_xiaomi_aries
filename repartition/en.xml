@@ -22,7 +22,7 @@
   <string name="aries_yes">Type exactly yes, then press the keyboard check.</string>
   <string name="aries_work">Updating physical partitions...</string>
   <string name="aries_failed">Operation failed. Read the log; do not boot Android.</string>
-  <string name="aries_complete">Formatting complete. Install a ROM before booting Android.</string>
+  <string name="aries_complete">Formatting complete. Reboot Recovery, then install a ROM.</string>
   <string name="aries_pending">Pending System target: %aries_current% MiB</string>
   <string name="aries_rom_capacity">Choose enough System space for the ROM to install.</string>
 </resources>

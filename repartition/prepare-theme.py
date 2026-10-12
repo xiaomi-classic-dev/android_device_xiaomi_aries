@@ -67,13 +67,35 @@ for lang in ('en', 'zh_CN'):
     save(tree, path)
 shutil.copyfile(os.path.join(local, 'postrecoveryboot.sh'), os.path.join(root, 'sbin', 'postrecoveryboot.sh'))
 os.chmod(os.path.join(root, 'sbin', 'postrecoveryboot.sh'), 0o755)
+shutil.copyfile(os.path.join(local, 'aries-recovery.sh'), os.path.join(root, 'sbin', 'aries-recovery.sh'))
+os.chmod(os.path.join(root, 'sbin', 'aries-recovery.sh'), 0o755)
+# While GPT migration is pending, the new ext4 boundaries are intentionally
+# unformatted. Defer TWRP's automatic mounts/probes until a fresh Recovery boot
+# sees the completed journal; the repair tool accesses the real devices itself.
+fstab = open(os.path.join(local, '..', 'recovery.fstab')).read()
+with open(os.path.join(root, 'etc', 'aries-recovery.fstab'), 'w') as f:
+    f.write(fstab)
+pending = []
+for line in fstab.splitlines(True):
+    fields = line.split()
+    if fields and fields[0] in ('/system', '/data', '/cache'):
+        continue
+    pending.append(line)
+with open(os.path.join(root, 'etc', 'aries-recovery-pending.fstab'), 'w') as f:
+    f.write(''.join(pending))
+service_path = os.path.join(root, 'init.recovery.service.rc')
+service = open(service_path).read()
+service = service.replace('service recovery /sbin/recovery', 'service recovery /sbin/aries-recovery.sh')
+with open(service_path, 'w') as f:
+    f.write(service)
 with open(os.path.join(root, 'etc', 'aries-repartition-ready'), 'w') as f:
     f.write('aries-gpt-v1\n')
 # Keep the generated ramdisk checksum inventory accurate after device hooks.
 path = os.path.join(root, 'ramdisk-files.sha256sum')
 if os.path.exists(path):
     names = [line.rstrip('\n').split('  ', 1)[1] for line in open(path) if '  ' in line]
-    for name in ('sbin/postrecoveryboot.sh', 'etc/aries-repartition-ready'):
+    for name in ('sbin/postrecoveryboot.sh', 'etc/aries-repartition-ready',
+                 'sbin/aries-recovery.sh', 'etc/aries-recovery.fstab', 'etc/aries-recovery-pending.fstab'):
         if name not in names:
             names.append(name)
     with open(path, 'w') as f:

@@ -22,7 +22,7 @@
   <string name="aries_yes">输入小写 yes，再点键盘确认键。</string>
   <string name="aries_work">正在调整物理分区……</string>
   <string name="aries_failed">操作失败。请查看日志，暂勿启动 Android。</string>
-  <string name="aries_complete">格式化已完成。请先刷入 ROM，再启动 Android。</string>
+  <string name="aries_complete">格式化已完成。请先重启 Recovery，再刷入 ROM。</string>
   <string name="aries_pending">未完成调整的目标：%aries_current% MiB</string>
   <string name="aries_rom_capacity">System 大小需满足待刷 ROM 的容量要求。</string>
 </resources>
