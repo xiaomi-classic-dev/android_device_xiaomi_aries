@@ -53,6 +53,7 @@ ui = ET.parse(ui_path)
 variables = ui.getroot().find('variables')
 for name, value in [('aries_system_mib', minimum), ('aries_confirm', ''),
                     ('aries_ready', '0'), ('aries_installed', '0'), ('aries_finish', '0'), ('aries_repair', '0'),
+                    ('aries_probing', '0'),
                     ('aries_restore', '0'), ('aries_mode', 'apply'), ('aries_run', '0')]:
     ET.SubElement(variables, 'variable', name=name, value=value)
 save(ui, ui_path)

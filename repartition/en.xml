@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+  <string name="aries_checking">Checking partition sizes...</string>
   <string name="aries_resize">Aries System / Data size</string>
   <string name="aries_erase1">WARNING: System, Cache and ALL Data will be erased!</string>
   <string name="aries_erase2">Includes apps, internal photos, videos and backups.</string>

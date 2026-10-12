@@ -2,24 +2,36 @@
 <aries>
   <listitem name="{@aries_resize=Aries System / Data size}">
     <actions>
-      <action function="cmd">/sbin/aries-repartition probe</action>
-      <action function="set">aries_phase=%property.aries.resize.phase%</action>
-      <action function="set">aries_installed=%property.aries.resize.installed%</action>
-      <action function="set">aries_ready=%property.aries.resize.ready%</action>
-      <action function="set">aries_finish=%property.aries.resize.finish%</action>
-      <action function="set">aries_repair=%property.aries.resize.repair%</action>
-      <action function="set">aries_restore=%property.aries.resize.restore%</action>
-      <action function="set">aries_current=%property.aries.resize.current%</action>
-      <action function="set">aries_system_mib=%property.aries.resize.current%</action>
-      <action function="set">aries_cache=%property.aries.resize.cache%</action>
-      <action function="set">aries_data_mib=%property.aries.resize.data%</action>
-      <action function="set">aries_error=%property.aries.resize.error%</action>
+      <action function="set">aries_ready=0</action>
+      <action function="set">aries_finish=0</action>
+      <action function="set">aries_repair=0</action>
+      <action function="set">aries_restore=0</action>
+      <action function="set">aries_error=</action>
+      <action function="set">aries_probing=1</action>
       <action function="page">aries_resize</action>
     </actions>
   </listitem>
   <pages>
     <page name="aries_resize">
       <template name="page" />
+      <action>
+        <condition var1="aries_probing" var2="1" />
+        <actions>
+          <action function="cmd">/sbin/aries-repartition probe</action>
+          <action function="set">aries_phase=%property.aries.resize.phase%</action>
+          <action function="set">aries_installed=%property.aries.resize.installed%</action>
+          <action function="set">aries_ready=%property.aries.resize.ready%</action>
+          <action function="set">aries_finish=%property.aries.resize.finish%</action>
+          <action function="set">aries_repair=%property.aries.resize.repair%</action>
+          <action function="set">aries_restore=%property.aries.resize.restore%</action>
+          <action function="set">aries_current=%property.aries.resize.current%</action>
+          <action function="set">aries_system_mib=%property.aries.resize.current%</action>
+          <action function="set">aries_cache=%property.aries.resize.cache%</action>
+          <action function="set">aries_data_mib=%property.aries.resize.data%</action>
+          <action function="set">aries_error=%property.aries.resize.error%</action>
+          <action function="set">aries_probing=0</action>
+        </actions>
+      </action>
       <text style="text_l">
         <placement x="%col1_x_header%" y="%row3_header_y%" />
         <text>{@aries_resize=Aries System / Data size}</text>
@@ -31,6 +43,11 @@
       <text style="text_m_fail">
         <placement x="%indent%" y="%row3_y%" />
         <text>{@aries_erase2=Includes apps, internal photos, videos and backups.}</text>
+      </text>
+      <text style="text_m">
+        <condition var1="aries_probing" var2="1" />
+        <placement x="%indent%" y="%row5_y%" />
+        <text>{@aries_checking=Checking partition sizes...}</text>
       </text>
       <text style="text_m">
         <placement x="%indent%" y="%row5_y%" />

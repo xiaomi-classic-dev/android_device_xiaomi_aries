@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+  <string name="aries_checking">正在检查分区容量……</string>
   <string name="aries_resize">Aries System / Data 容量调整</string>
   <string name="aries_erase1">警告：System、Cache 和全部 Data 将被清空！</string>
   <string name="aries_erase2">应用、内部照片、视频和备份都会丢失。</string>
