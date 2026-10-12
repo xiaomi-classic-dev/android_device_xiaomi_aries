@@ -268,7 +268,7 @@
       </text>
       <button style="main_button_half_height_full_width">
         <placement x="%indent%" y="%row8_y%" />
-        <text>{@reboot_recovery_btn=Reboot Recovery}</text>
+        <text>{@aries_reboot_recovery=Reboot Recovery}</text>
         <action function="reboot">recovery</action>
       </button>
       <button style="main_button_half_height_full_width">
