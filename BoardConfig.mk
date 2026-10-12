@@ -24,9 +24,9 @@ BOARD_KERNEL_PAGESIZE := 2048
 BOARD_MKBOOTIMG_ARGS := --ramdisk_offset 0x02000000
 
 # fix this up by examining /proc/mtd on a running device
-BOARD_BOOTIMAGE_PARTITION_SIZE := 0x105c0000
-BOARD_RECOVERYIMAGE_PARTITION_SIZE := 0x105c0000
-BOARD_SYSTEMIMAGE_PARTITION_SIZE := 0x105c0000
+BOARD_BOOTIMAGE_PARTITION_SIZE := 31457280
+BOARD_RECOVERYIMAGE_PARTITION_SIZE := 15728640
+BOARD_SYSTEMIMAGE_PARTITION_SIZE := 536870912
 BOARD_USERDATAIMAGE_PARTITION_SIZE := 0x105c0000
 BOARD_FLASH_BLOCK_SIZE := 131072
 
@@ -38,7 +38,8 @@ LZMA_RAMDISK_TARGETS                    := boot,recovery
 TARGET_USERIMAGES_USE_EXT4              := true
 TARGET_USERIMAGES_USE_F2FS              := true
 RECOVERY_VARIANT                        := twrp
-DEVICE_RESOLUTION                       := 1080x1920
+DEVICE_RESOLUTION                       := 720x1280
+TW_THEME := portrait_hdpi
 BOARD_HAS_NO_REAL_SDCARD                := true
 BOARD_RECOVERY_SWIPE                    := true
 TARGET_PREBUILT_RECOVERY_KERNEL         := device/xiaomi/aries/kernel
@@ -58,3 +59,4 @@ BOARD_SUPPRESS_SECURE_ERASE             := true
 BOARD_SUPPRESS_EMMC_WIPE                := true
 RECOVERY_SDCARD_ON_DATA                 := true
 TW_EXTRA_LANGUAGES                      := true
+
