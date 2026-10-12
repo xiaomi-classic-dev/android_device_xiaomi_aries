@@ -11,6 +11,15 @@ on post-fs-data
     write /dev/cpuctl/background/cpu.shares 52
     write /dev/cpuctl/dex2oat/cpu.shares 52
 
+    # RT group scheduling is enabled. Zero budgets would reject audio/video
+    # FIFO threads after moving HALs into CFS groups. Child budgets together
+    # stay within the existing 950000 us per 1000000 us root RT limit.
+    write /dev/cpuctl/foreground/cpu.rt_runtime_us 300000
+    write /dev/cpuctl/top-app/cpu.rt_runtime_us 300000
+    write /dev/cpuctl/rt/cpu.rt_runtime_us 200000
+    write /dev/cpuctl/camera-daemon/cpu.rt_runtime_us 100000
+    write /dev/cpuctl/system/cpu.rt_runtime_us 50000
+
     # bfqio is mounted at /dev/blkio to reuse Android's task node permissions.
     # Its weight ABI is bfqio.weight, not blkio.weight or blkio.bfq.weight.
     write /dev/blkio/bfqio.weight 1000
