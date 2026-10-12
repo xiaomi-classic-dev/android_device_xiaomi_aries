@@ -59,6 +59,7 @@ BOARD_SUPPRESS_SECURE_ERASE             := true
 BOARD_SUPPRESS_EMMC_WIPE                := true
 RECOVERY_SDCARD_ON_DATA                 := true
 TW_EXTRA_LANGUAGES                      := true
+TW_DEFAULT_LANGUAGE                    := zh_CN
 
 # Aries merged GPT physical System/Cache/Data resizing; generated device UI.
 TARGET_RECOVERY_DEVICE_MODULES += aries-repartition
