@@ -24,3 +24,7 @@ PRODUCT_PACKAGES += adb_keys
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/init/init.aries.debug.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.debug.rc
 endif
+
+# Cgroup layout and I/O profiles for the 3.4 BFQ controller.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/init/init.aries.cgroups.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.cgroups.rc

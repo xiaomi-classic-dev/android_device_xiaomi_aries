@@ -1,0 +1,18 @@
+# Android 12 CFS/cpuset profiles use the existing kernel controllers.
+on post-fs-data
+    # The four Krait CPUs have equal capacity. Keep foreground work unrestricted.
+    write /dev/cpuset/foreground/cpus 0-3
+    write /dev/cpuset/top-app/cpus 0-3
+    write /dev/cpuset/camera-daemon/cpus 0-3
+    write /dev/cpuset/background/cpus 0-1
+    write /dev/cpuset/system-background/cpus 0-2
+    write /dev/cpuset/restricted/cpus 0-1
+
+    write /dev/cpuctl/background/cpu.shares 52
+    write /dev/cpuctl/dex2oat/cpu.shares 52
+
+    # bfqio is mounted at /dev/blkio to reuse Android's task node permissions.
+    # Its weight ABI is bfqio.weight, not blkio.weight or blkio.bfq.weight.
+    write /dev/blkio/bfqio.weight 1000
+    write /dev/blkio/background/bfqio.weight 200
+    write /sys/block/mmcblk0/queue/scheduler bfq

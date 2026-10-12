@@ -1,0 +1,19 @@
+{
+  "Cgroups": [
+    {
+      "Controller": "blkio",
+      "Path": "/dev/blkio",
+      "Mode": "0755",
+      "UID": "system",
+      "GID": "system",
+      "Optional": true
+    },
+    {
+      "Controller": "bfqio",
+      "Path": "/dev/blkio",
+      "Mode": "0755",
+      "UID": "system",
+      "GID": "system"
+    }
+  ]
+}
