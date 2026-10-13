@@ -39,6 +39,7 @@ class AriesThermal final : public t::IThermal {
     std::mutex mutex;
     std::vector<Client> clients;
     std::atomic<bool> stopping{false};
+    mutable std::atomic<int> cpuSeverity{0};
     std::thread worker;
     std::vector<t::Temperature> temperatures() const {
         std::vector<t::Temperature> result;
@@ -53,9 +54,13 @@ class AriesThermal final : public t::IThermal {
             auto severity = t::ThrottlingSeverity::NONE;
             if (s.type == t::TemperatureType::CPU && std::isfinite(value)) {
                 // Mirror the existing APQ8064 thermald CPU mitigation thresholds.
-                const float thresholds[] = {70, 90, 95, 100, 110, 120};
-                for (size_t i=0; i<6; ++i)
-                    if (value >= thresholds[i]) severity = static_cast<t::ThrottlingSeverity>(i+1);
+                const float hot[] = {NAN, 70, 90, 95, 100, 110, 120};
+                const float cold[] = {NAN, 67, 85, 90, 95, 105, 115};
+                int level = cpuSeverity.load();
+                while (level > 0 && value <= cold[level]) --level;
+                while (level < 6 && value >= hot[level+1]) ++level;
+                cpuSeverity.store(level);
+                severity = static_cast<t::ThrottlingSeverity>(level);
             }
             result.push_back({s.type, s.name, value, severity});
         }
@@ -120,7 +125,11 @@ public:
             threshold.vrThrottlingThreshold=NAN;
             if(s.type==t::TemperatureType::CPU) {
                 const float hot[]={NAN,70,90,95,100,110,120};
-                for(size_t i=0;i<7;++i)threshold.hotThrottlingThresholds[i]=hot[i];
+                const float cold[]={NAN,67,85,90,95,105,115};
+                for(size_t i=0;i<7;++i) {
+                    threshold.hotThrottlingThresholds[i]=hot[i];
+                    threshold.coldThrottlingThresholds[i]=cold[i];
+                }
             }
             selected.push_back(threshold);
         }
