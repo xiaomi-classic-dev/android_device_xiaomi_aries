@@ -7,3 +7,9 @@ service vendor.thermal-aries /vendor/bin/hw/android.hardware.thermal@2.0-service
 on post-fs
     chown system system /sys/devices/virtual/thermal/thermal_zone7/mode
     chmod 0664 /sys/devices/virtual/thermal/thermal_zone7/mode
+    chown system system /sys/devices/virtual/thermal/thermal_zone8/mode
+    chmod 0664 /sys/devices/virtual/thermal/thermal_zone8/mode
+    chown system system /sys/devices/virtual/thermal/thermal_zone9/mode
+    chmod 0664 /sys/devices/virtual/thermal/thermal_zone9/mode
+    chown system system /sys/devices/virtual/thermal/thermal_zone10/mode
+    chmod 0664 /sys/devices/virtual/thermal/thermal_zone10/mode

@@ -23,16 +23,21 @@ using android::sp;
 static t1::ThermalStatus status(bool ok, const char* why = "") {
     return {ok ? t1::ThermalStatusCode::SUCCESS : t1::ThermalStatusCode::FAILURE, why};
 }
+constexpr size_t kCpuSensors = 4;
+constexpr size_t kSensors = kCpuSensors + 2;
 struct Sensor {t::TemperatureType type; std::string name, path; float scale;};
 class AriesThermal final : public t::IThermal {
     struct Client {
         sp<t::IThermalChangedCallback> callback;
         bool filter;
         t::TemperatureType type;
-        std::array<int, 3> last{{-1, -1, -1}};
+        std::array<int, kSensors> last{{-1, -1, -1, -1, -1, -1}};
     };
-    std::array<Sensor, 3> sensors{{
+    std::array<Sensor, kSensors> sensors{{
         {t::TemperatureType::CPU, "cpu-thermal", "", 1.0f},
+        {t::TemperatureType::CPU, "cpu-thermal-8", "", 1.0f},
+        {t::TemperatureType::CPU, "cpu-thermal-9", "", 1.0f},
+        {t::TemperatureType::CPU, "cpu-thermal-10", "", 1.0f},
         {t::TemperatureType::UNKNOWN, "pmic", "", 1000.0f},
         {t::TemperatureType::BATTERY, "battery", "/sys/class/power_supply/battery/temp", 10.0f},
     }};
@@ -40,19 +45,20 @@ class AriesThermal final : public t::IThermal {
     mutable std::mutex sensorMutex;
     std::vector<Client> clients;
     std::atomic<bool> stopping{false};
-    mutable std::atomic<int> cpuSeverity{0};
+    mutable std::array<int, kCpuSensors> cpuSeverity{{0, 0, 0, 0}};
     std::thread worker;
     std::vector<t::Temperature> temperatures() const {
         std::lock_guard<std::mutex> guard(sensorMutex);
         std::vector<t::Temperature> result;
-        for (const auto& s : sensors) {
+        for (size_t sensor = 0; sensor < sensors.size(); ++sensor) {
+            const auto& s = sensors[sensor];
             std::string text;
             float value = NAN;
             bool available = !s.path.empty() && android::base::ReadFileToString(s.path, &text);
             if (!available && s.type == t::TemperatureType::CPU && !s.path.empty()) {
                 // Legacy thermald reconfigures the main TSENS sensor during
                 // startup. The 3.4 driver then disables the subordinate sensors.
-                // Re-enable sensing for the CPU channel we read; leave all trip
+                // Re-enable sensing for each CPU channel we read; leave all trip
                 // thresholds and thermald's mitigation settings unchanged.
                 std::string modePath = s.path.substr(0, s.path.rfind('/')) + "/mode";
                 std::string mode;
@@ -72,10 +78,10 @@ class AriesThermal final : public t::IThermal {
                 // Mirror the existing APQ8064 thermald CPU mitigation thresholds.
                 const float hot[] = {NAN, 70, 90, 95, 100, 110, 120};
                 const float cold[] = {NAN, 67, 85, 90, 95, 105, 115};
-                int level = cpuSeverity.load();
+                int level = cpuSeverity[sensor];
                 while (level > 0 && value <= cold[level]) --level;
                 while (level < 6 && value >= hot[level+1]) ++level;
-                cpuSeverity.store(level);
+                cpuSeverity[sensor] = level;
                 severity = static_cast<t::ThrottlingSeverity>(level);
             }
             result.push_back({s.type, s.name, value, severity});
@@ -117,8 +123,10 @@ public:
             std::string type;
             if (!android::base::ReadFileToString(base+"/type", &type)) continue;
             type = android::base::Trim(type);
-            if (type == "tsens_tz_sensor7") sensors[0].path = base+"/temp";
-            if (type == "pm8921_tz") sensors[1].path = base+"/temp";
+            for (size_t cpu = 0; cpu < kCpuSensors; ++cpu)
+                if (type == "tsens_tz_sensor" + std::to_string(cpu + 7))
+                    sensors[cpu].path = base + "/temp";
+            if (type == "pm8921_tz") sensors[kCpuSensors].path = base+"/temp";
         }
     }
     ~AriesThermal() {stopping=true; if(worker.joinable())worker.join();}
@@ -157,7 +165,7 @@ public:
         bool duplicate=false;
         {std::lock_guard<std::mutex> guard(mutex);
          for(const auto& c:clients)if(android::hardware::interfacesEqual(c.callback,callback))duplicate=true;
-         if(!duplicate)clients.push_back({callback,filter,type,{{-1,-1,-1}}});}
+         if(!duplicate)clients.push_back({callback,filter,type,{{-1,-1,-1,-1,-1,-1}}});}
         cb(status(!duplicate,duplicate?"already registered":""));return Void();
     }
     Return<void> unregisterThermalChangedCallback(const sp<t::IThermalChangedCallback>& callback,
