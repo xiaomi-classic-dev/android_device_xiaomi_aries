@@ -1,0 +1,8 @@
+# Real vmpressure and kill-event interfaces for the in-kernel LMK backend.
+on init
+    chown lmkd system /proc/lowmemorykiller
+    chmod 0440 /proc/lowmemorykiller
+    chown root system /dev/memcg/memory.pressure_level
+    chmod 0040 /dev/memcg/memory.pressure_level
+    chown root system /dev/memcg/cgroup.event_control
+    chmod 0660 /dev/memcg/cgroup.event_control

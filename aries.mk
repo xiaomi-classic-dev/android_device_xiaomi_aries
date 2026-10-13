@@ -37,6 +37,9 @@ endif
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/init/init.aries.cgroups.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.cgroups.rc
 
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/init/init.aries.memory.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.memory.rc
+
 # Device services using actual legacy-kernel interfaces.
 PRODUCT_PACKAGES += \
     android.hardware.power-service.aries \
