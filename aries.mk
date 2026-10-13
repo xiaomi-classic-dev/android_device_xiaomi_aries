@@ -38,7 +38,8 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/init/init.aries.cgroups.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.cgroups.rc
 
 PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/init/init.aries.memory.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.memory.rc
+    $(DEVICE_PATH)/init/init.aries.memory.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.memory.rc \
+    $(DEVICE_PATH)/configs/fstab.aries.zram:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.aries.zram
 
 # Device services using actual legacy-kernel interfaces.
 PRODUCT_PACKAGES += \
