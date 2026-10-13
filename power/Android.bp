@@ -1,0 +1,10 @@
+cc_binary {
+    name: "android.hardware.power-service.aries",
+    vendor: true,
+    relative_install_path: "hw",
+    init_rc: ["power.rc"],
+    vintf_fragments: ["power-aries.xml"],
+    srcs: ["Power.cpp"],
+    shared_libs: ["libbase", "liblog", "libbinder_ndk", "android.hardware.power-V3-ndk"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}

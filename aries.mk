@@ -36,3 +36,8 @@ endif
 # Cgroup layout and I/O profiles for the 3.4 BFQ controller.
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/init/init.aries.cgroups.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.aries.cgroups.rc
+
+# Device services using actual legacy-kernel interfaces.
+PRODUCT_PACKAGES += \
+    android.hardware.power-service.aries \
+    android.hardware.thermal@2.0-service.aries
