@@ -37,16 +37,32 @@ class AriesThermal final : public t::IThermal {
         {t::TemperatureType::BATTERY, "battery", "/sys/class/power_supply/battery/temp", 10.0f},
     }};
     std::mutex mutex;
+    mutable std::mutex sensorMutex;
     std::vector<Client> clients;
     std::atomic<bool> stopping{false};
     mutable std::atomic<int> cpuSeverity{0};
     std::thread worker;
     std::vector<t::Temperature> temperatures() const {
+        std::lock_guard<std::mutex> guard(sensorMutex);
         std::vector<t::Temperature> result;
         for (const auto& s : sensors) {
             std::string text;
             float value = NAN;
-            if (!s.path.empty() && android::base::ReadFileToString(s.path, &text)) {
+            bool available = !s.path.empty() && android::base::ReadFileToString(s.path, &text);
+            if (!available && s.type == t::TemperatureType::CPU && !s.path.empty()) {
+                // Legacy thermald reconfigures the main TSENS sensor during
+                // startup. The 3.4 driver then disables the subordinate sensors.
+                // Re-enable sensing for the CPU channel we read; leave all trip
+                // thresholds and thermald's mitigation settings unchanged.
+                std::string modePath = s.path.substr(0, s.path.rfind('/')) + "/mode";
+                std::string mode;
+                if (android::base::ReadFileToString(modePath, &mode)
+                        && android::base::Trim(mode) == "disabled"
+                        && android::base::WriteStringToFile("enabled", modePath)) {
+                    available = android::base::ReadFileToString(s.path, &text);
+                }
+            }
+            if (available) {
                 char* end = nullptr;
                 float raw = strtof(text.c_str(), &end);
                 if (end != text.c_str() && std::isfinite(raw)) value = raw / s.scale;

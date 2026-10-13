@@ -3,3 +3,7 @@ service vendor.thermal-aries /vendor/bin/hw/android.hardware.thermal@2.0-service
     user system
     group system
     interface android.hardware.thermal@2.0::IThermal default
+
+on post-fs
+    chown system system /sys/devices/virtual/thermal/thermal_zone7/mode
+    chmod 0664 /sys/devices/virtual/thermal/thermal_zone7/mode
