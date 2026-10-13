@@ -1,0 +1,4 @@
+# Read existing sensors. Mitigation remains with thermald and the kernel.
+allow hal_thermal_default sysfs_thermal:dir r_dir_perms;
+allow hal_thermal_default sysfs_thermal:file r_file_perms;
+allow hal_thermal_default sysfs_batteryinfo:file r_file_perms;

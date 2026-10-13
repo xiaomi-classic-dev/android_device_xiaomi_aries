@@ -1,0 +1,2 @@
+# The service only writes the interactive governor's bounded pulse controls.
+allow hal_power_default sysfs_aries_boost:file rw_file_perms;
