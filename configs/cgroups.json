@@ -17,7 +17,7 @@
     }
   ],
   "Cgroups2": {
-    "Path": "/dev/cg2_bpf",
+    "Path": "/sys/fs/cgroup",
     "Mode": "0755",
     "UID": "system",
     "GID": "system"
