@@ -1,0 +1,7 @@
+cc_test {
+    name: "aries_lmk_event_probe",
+    vendor: true,
+    gtest: false,
+    srcs: ["lmk_event_probe.cpp"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}
