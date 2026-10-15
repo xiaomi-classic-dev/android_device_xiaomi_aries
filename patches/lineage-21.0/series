@@ -1,1 +1,2 @@
 packages/apps/DocumentsUI packages-apps-DocumentsUI/0001-fix-DocumentsUI-crash.patch
+packages/apps/Trebuchet packages-apps-Trebuchet/0001-cancel-unlock-callback-after-TIS-destroy.patch
