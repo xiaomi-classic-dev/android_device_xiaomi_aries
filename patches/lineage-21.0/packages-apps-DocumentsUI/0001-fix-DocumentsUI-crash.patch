@@ -1,0 +1,28 @@
+From a7967aeac22379d957ad12c42099cd626b2398a4 Mon Sep 17 00:00:00 2001
+From: "heqing.liu" <heqing.liu@unisoc.com>
+Date: Mon, 2 Sep 2024 11:19:02 +0800
+Subject: [PATCH] fix DocumentsUI crash
+
+set a defaulte value for ConfigStore to avoid crash
+
+bug: 361232422
+Change-Id: Id5ac8203dd75bf3339d81edaa72201ebaf406649
+
+(cherry picked from commit 0025b72fb9ed29dfc343d0b7829634243aeeef43)
+---
+ src/com/android/documentsui/base/State.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/com/android/documentsui/base/State.java b/src/com/android/documentsui/base/State.java
+index aa11f6f7c..22a84fcb8 100644
+--- a/src/com/android/documentsui/base/State.java
++++ b/src/com/android/documentsui/base/State.java
+@@ -91,7 +91,7 @@ public class State implements android.os.Parcelable {
+     public boolean openableOnly;
+     public boolean restrictScopeStorage;
+     public boolean showHiddenFiles;
+-    public ConfigStore configStore;
++    public ConfigStore configStore = new ConfigStore.ConfigStoreImpl();
+ 
+     /**
+      * Represents whether the state supports cross-profile file picking.
