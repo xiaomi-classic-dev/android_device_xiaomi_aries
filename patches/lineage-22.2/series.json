@@ -1,0 +1,31 @@
+{
+  "description": "Actual increments beyond the 31-repository / 123-commit Android 15 port_docs snapshot. Do not apply Android 14 patch series to this tree.",
+  "port_docs_baseline": "lineage-22.2-migration-guide.md, 2026-09-27",
+  "upstream_already_contains": {
+    "DocumentsUI": {
+      "upstream": "0025b72fb9ed29dfc343d0b7829634243aeeef43",
+      "already_present": true
+    },
+    "Trebuchet": {
+      "upstream": "4dfb35acc147280c15ed14d1d8458309e33f805e",
+      "already_present": true
+    },
+    "audio_hidl_policy": "Android15 moved hal_audio.te from public to private; non-Treble passthrough Bluetooth registration policy still needs porting"
+  },
+  "repositories": [
+    {
+      "path": "system/sepolicy",
+      "base_commit": "c935a114d40d20cb55a4d395446e61289dcc6667",
+      "baseline_tree": "1aa423458311154a555fda77a0249597db4f88a0",
+      "source_head": "b85f3358d20a06514ebbbb2e05e3c5b681d59cce",
+      "patches": [
+        {
+          "file": "system-sepolicy/0001-allow-non-treble-passthrough-audio-hidl.patch",
+          "source_commit": "b85f3358d20a06514ebbbb2e05e3c5b681d59cce",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "sha256": "405a6afa924cc7c00c9a37e121802c97c0c569fe32de3a49b37ed966e58d3319"
+        }
+      ]
+    }
+  ]
+}

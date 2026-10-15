@@ -1,0 +1,55 @@
+From b85f3358d20a06514ebbbb2e05e3c5b681d59cce Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Tue, 13 Oct 2026 01:10:21 +0800
+Subject: [PATCH] sepolicy: allow non-Treble audioserver to publish the HIDL
+ audio provider
+
+The non-Treble audio Core/Effects service uses passthrough mode. The
+Bluetooth HIDL 2.0 factory must live in the same audioserver process as
+its PCM client because libbluetooth_audio_session maintains process-local
+session state. Allow that process to publish the existing HIDL audio
+hwservice and receive calls from HAL clients.
+
+Keep the full-Treble rule unchanged, and retain the restriction that only
+hal_audio_server or audioserver may add the HIDL service on non-Treble
+products. Do not add audioserver to the broad HAL server attribute: that
+would also permit it to register the separate AIDL vendor service and
+violate the coredomain/vendor_service neverallow.
+
+The ordinary HIDL factory implementation is unchanged. Both combined
+and neverallow SELinux policy builds pass for lineage_aries-userdebug.
+
+Android 15 moved this policy from public/ to private/. Preserve the
+validated non-Treble passthrough Bluetooth session arrangement.
+
+(cherry picked from commit 9042b6b9ac26b85d5fdcdf123cc08d933e0ec772)
+
+Change-Id: Ie927ec7c71eef585625828a3e4383e7e13dc11d1
+---
+ private/hal_audio.te | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/private/hal_audio.te b/private/hal_audio.te
+index 237ffcd7c6aaedfe8c8e817298568b8471842a22..023450563ef75e98239ed23183381e355a2a96af 100644
+--- a/private/hal_audio.te
++++ b/private/hal_audio.te
+@@ -2,7 +2,15 @@
+ binder_call(hal_audio_client, hal_audio_server)
+ binder_call(hal_audio_server, hal_audio_client)
+ 
+-hal_attribute_hwservice(hal_audio, hal_audio_hwservice)
++full_treble_only(`hal_attribute_hwservice(hal_audio, hal_audio_hwservice)')
++not_full_treble(`
++  # Passthrough audio and its Bluetooth session share audioserver.
++  allow hal_audio_client hal_audio_hwservice:hwservice_manager find;
++  allow { hal_audio_server audioserver } hal_audio_hwservice:hwservice_manager { add find };
++  allow { hal_audio_server audioserver } hidl_base_hwservice:hwservice_manager add;
++  neverallow { domain -hal_audio_server -audioserver } hal_audio_hwservice:hwservice_manager add;
++  binder_call(hal_audio_client, audioserver)
++')
+ hal_attribute_service(hal_audio, hal_audio_service)
+ 
+ allow hal_audio ion_device:chr_file r_file_perms;
+-- 
+2.53.0
+
