@@ -1,0 +1,119 @@
+From 1ed6418e42a0cd8784ce3c3053cc78f3074c5cc5 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Fri, 16 Oct 2026 06:18:12 +0800
+Subject: [PATCH] Bluetooth: Keep Android 15 LE managers inactive on classic
+ controllers
+
+Adapt the MiOne advertising, scanning and privacy guards to Android 15. Unsupported scanner requests use current failure callbacks without allocating scanner entries or sending controller commands. Leave LE-capable controllers on their normal paths.
+
+Adapted-from: 2d07f7260c40b8986bc9d0ee826834ebcf9fbdd5
+Change-Id: Iadb039fb1d9d713debb9e9eb9ff537689102d7a3
+---
+ system/bta/dm/bta_dm_sec.cc             |  7 ++++++-
+ system/gd/hci/le_advertising_manager.cc |  5 +++++
+ system/gd/hci/le_scanning_manager.cc    | 16 ++++++++++++++++
+ 3 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/system/bta/dm/bta_dm_sec.cc b/system/bta/dm/bta_dm_sec.cc
+index 31ce27b772..af380cf4a3 100644
+--- a/system/bta/dm/bta_dm_sec.cc
++++ b/system/bta/dm/bta_dm_sec.cc
+@@ -26,6 +26,8 @@
+ #include "bta/include/bta_dm_ci.h"  // bta_dm_ci_rmt_oob
+ #include "btif/include/btif_dm.h"
+ #include "internal_include/bt_target.h"
++#include "main/shim/entry.h"
++#include "hci/controller.h"
+ #include "stack/include/bt_dev_class.h"
+ #include "stack/include/btm_ble_sec_api_types.h"
+ #include "stack/include/btm_client_interface.h"
+@@ -1008,7 +1010,10 @@ void bta_dm_ble_confirm_reply(const RawAddress& bd_addr, bool accept) {
+ }
+ 
+ /** This function set the local device LE privacy settings. */
+-void bta_dm_ble_config_local_privacy(bool privacy_enable) { BTM_BleConfigPrivacy(privacy_enable); }
++void bta_dm_ble_config_local_privacy(bool privacy_enable) {
++  if (!bluetooth::shim::GetController()->SupportsBle()) return;
++  BTM_BleConfigPrivacy(privacy_enable);
++}
+ 
+ namespace bluetooth {
+ namespace legacy {
+diff --git a/system/gd/hci/le_advertising_manager.cc b/system/gd/hci/le_advertising_manager.cc
+index 240f8f54d4..c682e390b4 100644
+--- a/system/gd/hci/le_advertising_manager.cc
++++ b/system/gd/hci/le_advertising_manager.cc
+@@ -161,6 +161,11 @@ struct LeAdvertisingManager::impl : public bluetooth::hci::LeAddressManagerCallb
+     acl_manager_ = acl_manager;
+     le_address_manager_ = acl_manager->GetLeAddressManager();
+     num_instances_ = controller_->GetLeNumberOfSupportedAdverisingSets();
++    if (!controller_->SupportsBle()) {
++      num_instances_ = 0;
++      log::info("Controller has no LE advertising capability");
++      return;
++    }
+ 
+     le_advertising_interface_ = hci_layer_->GetLeAdvertisingInterface(
+             module_handler_->BindOn(this, &LeAdvertisingManager::impl::handle_event));
+diff --git a/system/gd/hci/le_scanning_manager.cc b/system/gd/hci/le_scanning_manager.cc
+index c4263edfe5..4de88e9ca6 100644
+--- a/system/gd/hci/le_scanning_manager.cc
++++ b/system/gd/hci/le_scanning_manager.cc
+@@ -175,6 +175,10 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+     acl_manager_ = acl_manager;
+     storage_module_ = storage_module;
+     le_address_manager_ = acl_manager->GetLeAddressManager();
++    if (!controller_->SupportsBle()) {
++      log::info("Controller has no LE scanning capability");
++      return;
++    }
+     le_scanning_interface_ = hci_layer_->GetLeScanningInterface(
+             module_handler_->BindOn(this, &LeScanningManager::impl::handle_scan_results));
+     periodic_sync_manager_.Init(le_scanning_interface_, module_handler_);
+@@ -221,6 +225,7 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+   }
+ 
+   void stop() {
++    if (le_scanning_interface_ == nullptr) return;
+     for (auto subevent_code : LeScanningEvents) {
+       hci_layer_->UnregisterLeEventHandler(subevent_code);
+     }
+@@ -505,6 +510,10 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+   }
+ 
+   void register_scanner(const Uuid app_uuid) {
++    if (le_scanning_interface_ == nullptr) {
++      scanning_callbacks_->OnScannerRegistered(app_uuid, 0x00, ScanningCallback::INTERNAL_ERROR);
++      return;
++    }
+     for (uint8_t i = 1; i <= kMaxAppNum; i++) {
+       if (scanners_[i].in_use && scanners_[i].app_uuid == app_uuid) {
+         log::error("Application already registered {}", app_uuid.ToString());
+@@ -531,6 +540,7 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+   }
+ 
+   void unregister_scanner(ScannerId scanner_id) {
++    if (le_scanning_interface_ == nullptr) return;
+     if (scanner_id <= 0 || scanner_id > kMaxAppNum) {
+       log::warn("Invalid scanner id");
+       return;
+@@ -546,6 +556,7 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+   }
+ 
+   void scan(bool start) {
++    if (le_scanning_interface_ == nullptr) return;
+     // On-resume flag should always be reset if there is an explicit start/stop call.
+     scan_on_resume_ = false;
+     if (start) {
+@@ -628,6 +639,11 @@ struct LeScanningManager::impl : public LeAddressManagerCallback {
+ 
+   void set_scan_parameters(ScannerId scanner_id, LeScanType scan_type, uint16_t scan_interval,
+                            uint16_t scan_window, uint8_t scan_phy) {
++    if (le_scanning_interface_ == nullptr) {
++      scanning_callbacks_->OnSetScannerParameterComplete(scanner_id,
++                                                          ScanningCallback::ILLEGAL_PARAMETER);
++      return;
++    }
+     uint32_t max_scan_interval = kLeScanIntervalMax;
+     uint32_t max_scan_window = kLeScanWindowMax;
+     if (api_type_ == ScanApiType::EXTENDED) {

@@ -1,0 +1,243 @@
+{
+  "port_docs_baseline": [
+    {
+      "path": "art",
+      "base_head": "19e19c30a8b5e28365d2f844638c5b130cef116a",
+      "tree": "f38dffcff820c7867daae9cf0d68d8f27fd9591c"
+    },
+    {
+      "path": "bionic",
+      "base_head": "f2c50f309cc756f65cf0a87b7bd5749e79ca3d9e",
+      "tree": "e97daef96222f20cb2910d73d50a40682a27a051"
+    },
+    {
+      "path": "build/make",
+      "base_head": "920456178be2f5d17119448972bbf7a19c3b2a65",
+      "tree": "f4e9c84e667d52e3fb442851f046f2c38be4ba86"
+    },
+    {
+      "path": "build/soong",
+      "base_head": "8de4749aeeffc7cc55c94e56268dec1fcca0409f",
+      "tree": "768266d3537fed4358e030a95f74a003c1e63870"
+    },
+    {
+      "path": "device/lineage/sepolicy",
+      "base_head": "ebce294fe532ae7b8f78086bd86038e0ca5c4d6b",
+      "tree": "9739a1035a2a1c43da64406b605f5e7e2e91455e"
+    },
+    {
+      "path": "external/jemalloc_new",
+      "base_head": "b5356b16e94f99e32053fa0803e20f8acdf1b0ad",
+      "tree": "5d4acd59478c23412b67e02546c390d8f554f3f7"
+    },
+    {
+      "path": "external/perfetto",
+      "base_head": "a9ba55851214173467d30ef50dcbb45f565b1280",
+      "tree": "17c910ac2e870707d09203b144882849048690fd"
+    },
+    {
+      "path": "external/wpa_supplicant_8",
+      "base_head": "1b3d657cc8d988467387de3be17a99fff3e33e57",
+      "tree": "1e8f459ad065202bbc6e107926b27afbcef97e07"
+    },
+    {
+      "path": "frameworks/av",
+      "base_head": "d22d13d3b15dec8a5267619aabecdcd027ca26dd",
+      "tree": "ba00427cfe57bbdc858c2add02c5eba69386fe8e"
+    },
+    {
+      "path": "frameworks/base",
+      "base_head": "251a63d84347899d2b9a0ba1091499f23e315f2a",
+      "tree": "94b7c41d4463991473d31953dc5ba23a9d0f6c09"
+    },
+    {
+      "path": "frameworks/native",
+      "base_head": "46e41ca81a6863a1f7e62455edf9f873ba3204e2",
+      "tree": "a53e679b835f50b363358d425ba1d4f6a9846784"
+    },
+    {
+      "path": "frameworks/opt/net/wifi",
+      "base_head": "8ec9c37aea33f0e7ee8eae0cb410932f751abb84",
+      "tree": "ca0b6e54a0645586ef13d355a855d46005472288"
+    },
+    {
+      "path": "frameworks/opt/telephony",
+      "base_head": "ee4a584d53e587b4d75ef34b4ecc4050d2d3e151",
+      "tree": "ec36bddb8ede8496cd87b93eb11fa2e8d24c387e"
+    },
+    {
+      "path": "hardware/interfaces",
+      "base_head": "3f5a46bef29c0015bc3b921fa547bdc4abd66e89",
+      "tree": "a77954c211d51e9ffa2c42b98940f04f644d3966"
+    },
+    {
+      "path": "hardware/lineage/interfaces",
+      "base_head": "6f47b52dcc132565657c8c160df91c81bb93c891",
+      "tree": "057906f9b082beec8c516822d42615720972bb44"
+    },
+    {
+      "path": "hardware/qcom-caf/bt",
+      "base_head": "4adff8a76ae24f5bc568ced44c332bbad092a8f4",
+      "tree": "379df759379344096e0a3bfdd3cc50e332d88251"
+    },
+    {
+      "path": "hardware/qcom-caf/common",
+      "base_head": "b99f9b375eca83138f6c1be95894631374688af4",
+      "tree": "673eb7e1dc8daf7e874dee044dd4c6df5abdebc6"
+    },
+    {
+      "path": "hardware/qcom-caf/wlan",
+      "base_head": "4617d3874ef4656a7dcfcc0bb2df5c97be01466e",
+      "tree": "8425421274ad86e7cdd2826d0bd1d4d1972163a6"
+    },
+    {
+      "path": "hardware/ril",
+      "base_head": "f0de2468ec75b0f2ef871aa72dd80a6c0014b601",
+      "tree": "e8d4eb5b0506294cf26cac04ac1b69b5c69a0883"
+    },
+    {
+      "path": "packages/modules/Bluetooth",
+      "base_head": "e27d24a6672835ff0718416cb19303168676e3df",
+      "tree": "ed1bf87f8555fff42feb43b2f4bb33e2f6d4218d"
+    },
+    {
+      "path": "packages/modules/NetworkStack",
+      "base_head": "9180779b933d2b4b4b5756aee6e029b369d8be34",
+      "tree": "d4d611222fa2b5268dd4d89cdc0aa41f5abdbc87"
+    },
+    {
+      "path": "packages/modules/Wifi",
+      "base_head": "4b208d3ee76d7492db9c1caa7bd966fdd5a24b51",
+      "tree": "f613d57bc63d45edf28a27d07d33a8ec5b664541"
+    },
+    {
+      "path": "packages/modules/adb",
+      "base_head": "f2313227451e3d2192095eef09f9aa56585ac600",
+      "tree": "6edd660ba3df6e80582d520b540c10585d9c4e1f"
+    },
+    {
+      "path": "packages/services/Telephony",
+      "base_head": "c150728ac1f5155ef25ef814a3e163f80f49e270",
+      "tree": "d8ac94b7c7364d3a1b72ffffc57db624ad309101"
+    },
+    {
+      "path": "system/core",
+      "base_head": "ec4b63bc204fc0379653291292abd369105ada92",
+      "tree": "b8e6fcb0bedb52227fd78419add76e9c6debcabc"
+    },
+    {
+      "path": "system/libhidl",
+      "base_head": "2025ed34aad10de4e66f5d9854fa782a12654d1e",
+      "tree": "b8c17f7b679c5d3885e31c5964680e1ce212808d"
+    },
+    {
+      "path": "system/libhwbinder",
+      "base_head": "25a53a36f6f37273c488d7a7462715da07358d8f",
+      "tree": "0023417ba1024c2ebb0997d609a1a2f1fa2adbe8"
+    },
+    {
+      "path": "system/security",
+      "base_head": "bd6d8a903af2a09fa2035617d42814a9650b9452",
+      "tree": "ed64d431dba5d9099006fa6c897cdf50c1bef17b"
+    },
+    {
+      "path": "system/sepolicy",
+      "base_head": "c935a114d40d20cb55a4d395446e61289dcc6667",
+      "tree": "1aa423458311154a555fda77a0249597db4f88a0"
+    },
+    {
+      "path": "vendor/lineage",
+      "base_head": "8a040c29025b95b7532f0a9a35b878c56c09b439",
+      "tree": "a24fb34b9c83e473f75e41fb49a6a8b8775d12fa"
+    },
+    {
+      "path": "vendor/qcom/opensource/power",
+      "base_head": "cdcb2104d336d072ecd18de7db11c538eb8aeb08",
+      "tree": "aaf9af637aecdaf42ee36e457984c5eac147799d"
+    },
+    {
+      "path": "packages/apps/DocumentsUI",
+      "base_head": "514aa82fc1d7786dce5900c339b210e42581462d",
+      "tree": "e53fc33c4bc46fd27b2807fadf25438dcf744e70"
+    },
+    {
+      "path": "packages/apps/Trebuchet",
+      "base_head": "2bee8237d1bb4bc79c348cc7178a780e44a822a3",
+      "tree": "1cb7e025f63d5b7dff8caf6ef3be4b8caf23078b"
+    },
+    {
+      "path": "system/memory/lmkd",
+      "base_head": "4812ac8dbb7efa0bc01789d80ee7604e456f10f5",
+      "tree": "66c6b8100c3389121a71e1ff33f7b96926143a0b"
+    },
+    {
+      "path": "system/bpf",
+      "base_head": "26a836fc2bae1bf8dca48c5692b9efda00d2a75a",
+      "tree": "22d4615e5d56d8d37329a7433844102dfa3115f3"
+    },
+    {
+      "path": "system/netd",
+      "base_head": "bc405f84541602df142fe470967cca349bee6af7",
+      "tree": "e2ea54261bf9624293e21d9555218b57f4321df9"
+    },
+    {
+      "path": "packages/modules/Connectivity",
+      "base_head": "42f77549fc9d96709966c04f31011a27bc2b26c5",
+      "tree": "6a2e394469264d482f8e8604c3189431ad5ee0ae"
+    },
+    {
+      "path": "prebuilts/clang/host/linux-x86",
+      "base_head": "96266255abde668f1bf100bf2c47363b96b7a21e",
+      "tree": "0e56d142f1ac60a26f61c9c422655ca179dd1031"
+    },
+    {
+      "path": "system/logging",
+      "base_head": "0a02c4d13e882ec9b67dcb2cb3b135f08656593a",
+      "tree": "23a26fe1d2127bda332b454d60b046e4c3a790a4"
+    },
+    {
+      "path": "hardware/broadcom/wlan",
+      "base_head": "f02ad0aae51350bcf45b7b8dae40a1a1e386d4f5",
+      "tree": "2909874652308cbb50f24cb82c5cd96406004d5b",
+      "reason": "Record the previously unmodified Broadcom repository now required by the MiOne HAL-table compatibility increment."
+    }
+  ],
+  "upstream_backports": [
+    {
+      "project": "frameworks/base",
+      "source_commit": "7823b7915b5a52557b6a4512c30f85ffd4d9816e",
+      "upstream_commit": "72a370af78d0c86023ffa05daaf570b0fb40794f",
+      "subject": "Add a service for AppSearch maintenance service for schedule flush",
+      "published_source_url": "https://github.com/xiaomi-classic-dev/android_frameworks_base/commit/7823b7915b5a52557b6a4512c30f85ffd4d9816e",
+      "upstream_url": "https://github.com/LineageOS/android_frameworks_base/commit/72a370af78d0c86023ffa05daaf570b0fb40794f",
+      "patch_file_exported": false
+    },
+    {
+      "project": "frameworks/base",
+      "source_commit": "841135df685b40033f75baa4df3cef848eecdc66",
+      "upstream_commit": "7afbc249e2b0462e1cb5908c041e01d28b7e801d",
+      "subject": "Avoid crash on invalid subid",
+      "published_source_url": "https://github.com/xiaomi-classic-dev/android_frameworks_base/commit/841135df685b40033f75baa4df3cef848eecdc66",
+      "upstream_url": "https://github.com/LineageOS/android_frameworks_base/commit/7afbc249e2b0462e1cb5908c041e01d28b7e801d",
+      "patch_file_exported": false
+    },
+    {
+      "project": "frameworks/base",
+      "source_commit": "d5c1861e04636c5cd58be098a15f7620ca12a31b",
+      "upstream_commit": "06775778daf750972149143839c462a26402cb0c",
+      "subject": "StatsCollector: Silence stack trace when expected",
+      "published_source_url": "https://github.com/xiaomi-classic-dev/android_frameworks_base/commit/d5c1861e04636c5cd58be098a15f7620ca12a31b",
+      "upstream_url": "https://github.com/LineageOS/android_frameworks_base/commit/06775778daf750972149143839c462a26402cb0c",
+      "patch_file_exported": false
+    },
+    {
+      "project": "frameworks/base",
+      "source_commit": "a36c1ff69a4a5b64f54aa5832ac343f97abd42f8",
+      "upstream_commit": "aaf8cd86ad4f44c298afa020acda75c80b06c554",
+      "subject": "StatsCollector: Handle FEATURE_NOT_SUPPORTED error in onBluetoothActivityEnergyInfoError",
+      "published_source_url": "https://github.com/xiaomi-classic-dev/android_frameworks_base/commit/a36c1ff69a4a5b64f54aa5832ac343f97abd42f8",
+      "upstream_url": "https://github.com/LineageOS/android_frameworks_base/commit/aaf8cd86ad4f44c298afa020acda75c80b06c554",
+      "patch_file_exported": false
+    }
+  ]
+}

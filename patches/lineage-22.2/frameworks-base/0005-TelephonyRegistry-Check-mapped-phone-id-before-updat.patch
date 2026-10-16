@@ -1,0 +1,31 @@
+From 1cff1c6c58726e2d885ae552f5c83f3d05537af0 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Fri, 16 Oct 2026 21:16:54 +0800
+Subject: [PATCH] TelephonyRegistry: Check mapped phone id before updating NTN
+ signal strength
+
+An otherwise valid subscription can have no active phone mapping. Check
+the current modem range and the actual signal-strength array before the
+write under mRecords, retaining permission checks and normal callbacks.
+
+Change-Id: Id4dc541312e29d31071566f1b11954e364eee2a9
+---
+ services/core/java/com/android/server/TelephonyRegistry.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
+index 7a1fc2465f9d..0c080c4cb30e 100644
+--- a/services/core/java/com/android/server/TelephonyRegistry.java
++++ b/services/core/java/com/android/server/TelephonyRegistry.java
+@@ -3890,6 +3890,11 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+ 
+         synchronized (mRecords) {
+             int phoneId = getPhoneIdFromSubId(subId);
++            if (!validatePhoneId(phoneId)
++                    || phoneId >= mCarrierRoamingNtnSignalStrength.length) {
++                log("notifyCarrierRoamingNtnSignalStrengthChanged: invalid phone id=" + phoneId);
++                return;
++            }
+             mCarrierRoamingNtnSignalStrength[phoneId] = ntnSignalStrength;
+             for (Record r : mRecords) {
+                 if (r.matchTelephonyCallbackEvent(

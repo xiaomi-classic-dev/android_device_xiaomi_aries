@@ -1,0 +1,323 @@
+From 1cdf9d0f16cb71ed0784082f2f6512685ec879cf Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Fri, 16 Oct 2026 06:17:40 +0800
+Subject: [PATCH] Bluetooth: Initialize LE capabilities only for capable
+ Android 15 controllers
+
+Adapt the MiOne classic-only controller fix to Android 15 GD APIs and channel sounding. Wait for BR/EDR features before LE discovery, synchronize the LE supported-state callback before reading LE feature-dependent capabilities, and retain SSP setup for classic controllers. Query event mask page 2 only when the controller reports the command.
+
+Adapted-from: 0c72713d86013fcc12c03c57f522b42c375950bc
+Change-Id: I704a6edec2eb5e028bdf52a44c8114c49609b6a6
+---
+ system/gd/hci/controller.cc | 236 +++++++++++++++++++-----------------
+ 1 file changed, 124 insertions(+), 112 deletions(-)
+
+diff --git a/system/gd/hci/controller.cc b/system/gd/hci/controller.cc
+index 925f1cc787..366b7b5ba3 100644
+--- a/system/gd/hci/controller.cc
++++ b/system/gd/hci/controller.cc
+@@ -64,11 +64,6 @@ struct Controller::impl {
+                                handler->BindOn(this, &Controller::impl::NumberOfCompletedPackets));
+ 
+     set_event_mask(kDefaultEventMask);
+-    if (com::android::bluetooth::flags::encryption_change_v2()) {
+-      set_event_mask_page_2(kDefaultEventMaskPage2);
+-    }
+-
+-    write_le_host_support(Enable::ENABLED, Enable::DISABLED);
+     hci_->EnqueueCommand(
+             ReadLocalNameBuilder::Create(),
+             handler->BindOnceOn(this, &Controller::impl::read_local_name_complete_handler));
+@@ -81,14 +76,6 @@ struct Controller::impl {
+             handler->BindOnceOn(this,
+                                 &Controller::impl::read_local_supported_commands_complete_handler));
+ 
+-    hci_->EnqueueCommand(
+-            LeReadLocalSupportedFeaturesBuilder::Create(),
+-            handler->BindOnceOn(this, &Controller::impl::le_read_local_supported_features_handler));
+-
+-    hci_->EnqueueCommand(
+-            LeReadSupportedStatesBuilder::Create(),
+-            handler->BindOnceOn(this, &Controller::impl::le_read_supported_states_handler));
+-
+     // Wait for all extended features read
+     std::promise<void> features_promise;
+     auto features_future = features_promise.get_future();
+@@ -99,14 +86,31 @@ struct Controller::impl {
+                                 &Controller::impl::read_local_extended_features_complete_handler,
+                                 std::move(features_promise)));
+     features_future.wait();
++    if (com::android::bluetooth::flags::encryption_change_v2() &&
++        is_supported(OpCode::SET_EVENT_MASK_PAGE_2)) {
++      set_event_mask_page_2(kDefaultEventMaskPage2);
++    }
+ 
+-    if (com::android::bluetooth::flags::channel_sounding_in_stack() &&
+-        module_.SupportsBleChannelSounding()) {
+-      le_set_event_mask(MaskLeEventMask(local_version_information_.hci_version_,
+-                                        kDefaultLeEventMask | kLeCSEventMask));
+-    } else {
+-      le_set_event_mask(
+-              MaskLeEventMask(local_version_information_.hci_version_, kDefaultLeEventMask));
++    if (module_.SupportsBle()) {
++      write_le_host_support(Enable::ENABLED, Enable::DISABLED);
++      hci_->EnqueueCommand(
++              LeReadLocalSupportedFeaturesBuilder::Create(),
++              handler->BindOnceOn(this, &Controller::impl::le_read_local_supported_features_handler));
++      std::promise<void> le_features_promise;
++      auto le_features_future = le_features_promise.get_future();
++      hci_->EnqueueCommand(
++              LeReadSupportedStatesBuilder::Create(),
++              handler->BindOnceOn(this, &Controller::impl::le_read_supported_states_handler,
++                                  std::move(le_features_promise)));
++      le_features_future.wait();
++      if (com::android::bluetooth::flags::channel_sounding_in_stack() &&
++          module_.SupportsBleChannelSounding()) {
++        le_set_event_mask(MaskLeEventMask(local_version_information_.hci_version_,
++                                          kDefaultLeEventMask | kLeCSEventMask));
++      } else {
++        le_set_event_mask(
++                MaskLeEventMask(local_version_information_.hci_version_, kDefaultLeEventMask));
++      }
+     }
+ 
+     hci_->EnqueueCommand(
+@@ -124,14 +128,16 @@ struct Controller::impl {
+               handler->BindOnceOn(this, &Controller::impl::set_min_encryption_key_size_handler));
+     }
+ 
+-    if (is_supported(OpCode::LE_READ_BUFFER_SIZE_V2)) {
+-      hci_->EnqueueCommand(
+-              LeReadBufferSizeV2Builder::Create(),
+-              handler->BindOnceOn(this, &Controller::impl::le_read_buffer_size_v2_handler));
+-    } else {
+-      hci_->EnqueueCommand(
+-              LeReadBufferSizeV1Builder::Create(),
+-              handler->BindOnceOn(this, &Controller::impl::le_read_buffer_size_handler));
++    if (module_.SupportsBle()) {
++      if (is_supported(OpCode::LE_READ_BUFFER_SIZE_V2)) {
++        hci_->EnqueueCommand(
++                LeReadBufferSizeV2Builder::Create(),
++                handler->BindOnceOn(this, &Controller::impl::le_read_buffer_size_v2_handler));
++      } else {
++        hci_->EnqueueCommand(
++                LeReadBufferSizeV1Builder::Create(),
++                handler->BindOnceOn(this, &Controller::impl::le_read_buffer_size_handler));
++      }
+     }
+ 
+     if (is_supported(OpCode::READ_LOCAL_SUPPORTED_CODECS_V1)) {
+@@ -140,30 +146,32 @@ struct Controller::impl {
+               handler->BindOnceOn(this, &Controller::impl::read_local_supported_codecs_v1_handler));
+     }
+ 
+-    hci_->EnqueueCommand(
+-            LeReadFilterAcceptListSizeBuilder::Create(),
+-            handler->BindOnceOn(this, &Controller::impl::le_read_accept_list_size_handler));
+-
+-    if (is_supported(OpCode::LE_READ_RESOLVING_LIST_SIZE) && module_.SupportsBlePrivacy()) {
++    if (module_.SupportsBle()) {
+       hci_->EnqueueCommand(
+-              LeReadResolvingListSizeBuilder::Create(),
+-              handler->BindOnceOn(this, &Controller::impl::le_read_resolving_list_size_handler));
+-    } else {
+-      log::info("LE_READ_RESOLVING_LIST_SIZE not supported, defaulting to 0");
+-      le_resolving_list_size_ = 0;
+-    }
++              LeReadFilterAcceptListSizeBuilder::Create(),
++              handler->BindOnceOn(this, &Controller::impl::le_read_accept_list_size_handler));
++
++      if (is_supported(OpCode::LE_READ_RESOLVING_LIST_SIZE) && module_.SupportsBlePrivacy()) {
++        hci_->EnqueueCommand(
++                LeReadResolvingListSizeBuilder::Create(),
++                handler->BindOnceOn(this, &Controller::impl::le_read_resolving_list_size_handler));
++      } else {
++        log::info("LE_READ_RESOLVING_LIST_SIZE not supported, defaulting to 0");
++        le_resolving_list_size_ = 0;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_MAXIMUM_DATA_LENGTH) &&
+-        module_.SupportsBleDataPacketLengthExtension()) {
+-      hci_->EnqueueCommand(
+-              LeReadMaximumDataLengthBuilder::Create(),
+-              handler->BindOnceOn(this, &Controller::impl::le_read_maximum_data_length_handler));
+-    } else {
+-      log::info("LE_READ_MAXIMUM_DATA_LENGTH not supported, defaulting to 0");
+-      le_maximum_data_length_.supported_max_rx_octets_ = 0;
+-      le_maximum_data_length_.supported_max_rx_time_ = 0;
+-      le_maximum_data_length_.supported_max_tx_octets_ = 0;
+-      le_maximum_data_length_.supported_max_tx_time_ = 0;
++      if (is_supported(OpCode::LE_READ_MAXIMUM_DATA_LENGTH) &&
++          module_.SupportsBleDataPacketLengthExtension()) {
++        hci_->EnqueueCommand(
++                LeReadMaximumDataLengthBuilder::Create(),
++                handler->BindOnceOn(this, &Controller::impl::le_read_maximum_data_length_handler));
++      } else {
++        log::info("LE_READ_MAXIMUM_DATA_LENGTH not supported, defaulting to 0");
++        le_maximum_data_length_.supported_max_rx_octets_ = 0;
++        le_maximum_data_length_.supported_max_rx_time_ = 0;
++        le_maximum_data_length_.supported_max_tx_octets_ = 0;
++        le_maximum_data_length_.supported_max_tx_time_ = 0;
++      }
+     }
+ 
+     // SSP is managed by security layer once enabled
+@@ -175,71 +183,73 @@ struct Controller::impl {
+                       this,
+                       &Controller::impl::write_secure_connections_host_support_complete_handler));
+     }
+-    if (is_supported(OpCode::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH) &&
+-        module_.SupportsBleDataPacketLengthExtension()) {
+-      hci_->EnqueueCommand(
+-              LeReadSuggestedDefaultDataLengthBuilder::Create(),
+-              handler->BindOnceOn(
+-                      this, &Controller::impl::le_read_suggested_default_data_length_handler));
+-    } else {
+-      log::info("LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH not supported, defaulting to 27 (0x1B)");
+-      le_suggested_default_data_length_ = 27;
+-    }
++    if (module_.SupportsBle()) {
++      if (is_supported(OpCode::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH) &&
++          module_.SupportsBleDataPacketLengthExtension()) {
++        hci_->EnqueueCommand(
++                LeReadSuggestedDefaultDataLengthBuilder::Create(),
++                handler->BindOnceOn(
++                        this, &Controller::impl::le_read_suggested_default_data_length_handler));
++      } else {
++        log::info("LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH not supported, defaulting to 27 (0x1B)");
++        le_suggested_default_data_length_ = 27;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH) &&
+-        module_.SupportsBleExtendedAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadMaximumAdvertisingDataLengthBuilder::Create(),
+-              handler->BindOnceOn(
+-                      this, &Controller::impl::le_read_maximum_advertising_data_length_handler));
+-    } else {
+-      log::info("LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH not supported, defaulting to 31 (0x1F)");
+-      le_maximum_advertising_data_length_ = 31;
+-    }
++      if (is_supported(OpCode::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH) &&
++          module_.SupportsBleExtendedAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadMaximumAdvertisingDataLengthBuilder::Create(),
++                handler->BindOnceOn(
++                        this, &Controller::impl::le_read_maximum_advertising_data_length_handler));
++      } else {
++        log::info("LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH not supported, defaulting to 31 (0x1F)");
++        le_maximum_advertising_data_length_ = 31;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS) &&
+-        module_.SupportsBleExtendedAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadNumberOfSupportedAdvertisingSetsBuilder::Create(),
+-              handler->BindOnceOn(
+-                      this,
+-                      &Controller::impl::le_read_number_of_supported_advertising_sets_handler));
+-    } else {
+-      log::info("LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS not supported, defaulting to 1");
+-      le_number_supported_advertising_sets_ = 1;
+-    }
++      if (is_supported(OpCode::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS) &&
++          module_.SupportsBleExtendedAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadNumberOfSupportedAdvertisingSetsBuilder::Create(),
++                handler->BindOnceOn(
++                        this,
++                        &Controller::impl::le_read_number_of_supported_advertising_sets_handler));
++      } else {
++        log::info("LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS not supported, defaulting to 1");
++        le_number_supported_advertising_sets_ = 1;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE) &&
+-        module_.SupportsBlePeriodicAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadPeriodicAdvertiserListSizeBuilder::Create(),
+-              handler->BindOnceOn(
+-                      this, &Controller::impl::le_read_periodic_advertiser_list_size_handler));
+-    } else {
+-      log::info("LE_READ_PERIODIC_ADVERTISER_LIST_SIZE not supported, defaulting to 0");
+-      le_periodic_advertiser_list_size_ = 0;
+-    }
+-    if (is_supported(OpCode::LE_SET_HOST_FEATURE) &&
+-        module_.SupportsBleConnectedIsochronousStreamCentral()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTED_ISO_STREAM_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
+-    }
++      if (is_supported(OpCode::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE) &&
++          module_.SupportsBlePeriodicAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadPeriodicAdvertiserListSizeBuilder::Create(),
++                handler->BindOnceOn(
++                        this, &Controller::impl::le_read_periodic_advertiser_list_size_handler));
++      } else {
++        log::info("LE_READ_PERIODIC_ADVERTISER_LIST_SIZE not supported, defaulting to 0");
++        le_periodic_advertiser_list_size_ = 0;
++      }
++      if (is_supported(OpCode::LE_SET_HOST_FEATURE) &&
++          module_.SupportsBleConnectedIsochronousStreamCentral()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTED_ISO_STREAM_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
++      }
+ 
+-    if (is_supported(OpCode::LE_SET_HOST_FEATURE) && module_.SupportsBleConnectionSubrating()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTION_SUBRATING_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
+-    }
++      if (is_supported(OpCode::LE_SET_HOST_FEATURE) && module_.SupportsBleConnectionSubrating()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTION_SUBRATING_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
++      }
+ 
+-    if (com::android::bluetooth::flags::channel_sounding_in_stack() &&
+-        module_.SupportsBleChannelSounding()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CHANNEL_SOUNDING_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
++      if (com::android::bluetooth::flags::channel_sounding_in_stack() &&
++          module_.SupportsBleChannelSounding()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CHANNEL_SOUNDING_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler->BindOnceOn(this, &Controller::impl::le_set_host_feature_handler));
++      }
+     }
+ 
+     if (is_supported(OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING)) {
+@@ -250,7 +260,8 @@ struct Controller::impl {
+     }
+ 
+     // Skip vendor capabilities check if configured.
+-    if (os::GetSystemPropertyBool(kPropertyVendorCapabilitiesEnabled,
++    if (module_.SupportsBle() &&
++        os::GetSystemPropertyBool(kPropertyVendorCapabilitiesEnabled,
+                                   kDefaultVendorCapabilitiesEnabled)) {
+       // More commands can be enqueued from le_get_vendor_capabilities_handler
+       std::promise<void> vendor_promise;
+@@ -547,12 +558,13 @@ struct Controller::impl {
+     le_local_supported_features_ = complete_view.GetLeFeatures();
+   }
+ 
+-  void le_read_supported_states_handler(CommandCompleteView view) {
++  void le_read_supported_states_handler(std::promise<void> promise, CommandCompleteView view) {
+     auto complete_view = LeReadSupportedStatesCompleteView::Create(view);
+     ASSERT(complete_view.IsValid());
+     ErrorCode status = complete_view.GetStatus();
+     log::assert_that(status == ErrorCode::SUCCESS, "Status {}", ErrorCodeText(status));
+     le_supported_states_ = complete_view.GetLeStates();
++    promise.set_value();
+   }
+ 
+   void le_read_accept_list_size_handler(CommandCompleteView view) {

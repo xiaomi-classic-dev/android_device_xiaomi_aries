@@ -1,0 +1,46 @@
+From bc31d42890ff8b7d55eee7b8002e5d0c61e601ad Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Fri, 16 Oct 2026 21:16:54 +0800
+Subject: [PATCH] bcmdhd: Normalize successful legacy BTCOEXMODE replies
+
+A legacy kernel replies OK with length 2 after a successful BTCOEXMODE
+setter. The supplicant AIDL setter expects zero on success. Normalize
+only exact BTCOEXMODE 0/1/2 commands with an OK reply, keeping all query
+output lengths, other command replies, and negative ioctl errors.
+
+Snapshot the command before ioctl because cmd and reply can alias.
+Reference: LineageOS/android_hardware_broadcom_wlan lineage-16.0
+setter-zero/query-length contract. Avoid reverting the later generic
+query-output fix db940405793560afdf211d55de615b10478a0245.
+
+Change-Id: I6fe293cac8a6f70450cd860203b4f8baf8b61b53
+---
+ bcmdhd/wpa_supplicant_8_lib/driver_cmd_nl80211.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/bcmdhd/wpa_supplicant_8_lib/driver_cmd_nl80211.c b/bcmdhd/wpa_supplicant_8_lib/driver_cmd_nl80211.c
+index 56504f6..f0557de 100644
+--- a/bcmdhd/wpa_supplicant_8_lib/driver_cmd_nl80211.c
++++ b/bcmdhd/wpa_supplicant_8_lib/driver_cmd_nl80211.c
+@@ -74,6 +74,10 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+ 	struct ifreq ifr;
+ 	android_wifi_priv_cmd priv_cmd;
+ 	int ret = 0;
++	/* Save the command before an ioctl can overwrite an aliased reply buffer. */
++	int btcoex_mode = os_strcasecmp(cmd, "BTCOEXMODE 0") == 0 ||
++		os_strcasecmp(cmd, "BTCOEXMODE 1") == 0 ||
++		os_strcasecmp(cmd, "BTCOEXMODE 2") == 0;
+ 
+ 	if (bss->ifindex <= 0 && bss->wdev_id > 0) {
+ 		/* DRIVER CMD received on the DEDICATED P2P Interface which doesn't
+@@ -125,7 +129,9 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+ 			wpa_driver_send_hang_msg(drv);
+ 		} else {
+ 			drv_errors = 0;
+-			ret = strlen(buf);
++			/* Legacy BTCOEXMODE setters reply "OK"; AIDL expects zero. */
++			ret = btcoex_mode && os_strcasecmp(buf, "OK") == 0 ?
++				0 : strlen(buf);
+ 			wpa_driver_notify_country_change(drv->ctx, cmd);
+ 			wpa_printf(MSG_DEBUG, "%s %s len = %d, %zu", __func__, buf, ret, strlen(buf));
+ 		}
