@@ -220,9 +220,16 @@
           "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
           "patch_id": "9db544583a31a17a12b0f6d0620eacba203ec005",
           "sha256": "c8d7436cf5b043213d15cff0f551010912b638a12e81066920c8e127fbd3cb23"
+        },
+        {
+          "file": "packages-modules-Bluetooth/0002-Bluetooth-Bind-LE-feature-completion-promise-before-the-HCI-even.patch",
+          "source_commit": "21922523d1c31b4acc483630c6cdb73b0c0b14cf",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "32302b7ca73119304f613257c39420c826f55d9e",
+          "sha256": "3156977a0a8d214433dceaed532f867186a9b0d4ae9624943c1a7ead50ff0802"
         }
       ],
-      "source_head": "b24b16c9300a0b7fbf111ec627a8b493c12b93b1"
+      "source_head": "21922523d1c31b4acc483630c6cdb73b0c0b14cf"
     },
     {
       "path": "packages/modules/Connectivity",
@@ -360,5 +367,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 8
+  "mione_platform_increment_count": 9
 }

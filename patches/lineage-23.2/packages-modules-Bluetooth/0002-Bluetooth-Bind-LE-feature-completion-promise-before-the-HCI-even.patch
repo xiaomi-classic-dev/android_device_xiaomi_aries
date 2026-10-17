@@ -1,0 +1,25 @@
+From 21922523d1c31b4acc483630c6cdb73b0c0b14cf Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 06:19:21 +0800
+Subject: [PATCH] Bluetooth: Bind LE feature completion promise before the HCI
+ event
+
+PostableContext: :BindOnceOn binds extra arguments before the event supplied by HciInterface. Match the existing controller promise callbacks so the LE supported-states callback keeps its CommandCompleteView signature and releases the startup wait after parsing the result.
+Change-Id: I9ae8fc0bad7829b866fd7a1a333be777ba1920d9
+---
+ system/gd/hci/controller_impl.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/system/gd/hci/controller_impl.cc b/system/gd/hci/controller_impl.cc
+index c024d3a55c..167b070eda 100644
+--- a/system/gd/hci/controller_impl.cc
++++ b/system/gd/hci/controller_impl.cc
+@@ -552,7 +552,7 @@ struct ControllerImpl::impl {
+     le_local_supported_features_ = complete_view.GetLeFeatures();
+   }
+ 
+-  void le_read_supported_states_handler(CommandCompleteView view, std::promise<void> promise) {
++  void le_read_supported_states_handler(std::promise<void> promise, CommandCompleteView view) {
+     auto complete_view = LeReadSupportedStatesCompleteView::Create(view);
+     ASSERT(complete_view.IsValid());
+     ErrorCode status = complete_view.GetStatus();
