@@ -47,3 +47,6 @@ BOARD_SYSTEMIMAGE_PARTITION_SIZE   := 2147483648
 TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)
 
 -include vendor/xiaomi/cancro/BoardConfigVendor.mk
+
+# Admit only this product to the real Linux 3.4 BPF loader backport.
+$(call soong_config_set,netbpfload,legacy_kernel,true)

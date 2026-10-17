@@ -6,3 +6,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # Enable Android's BPF networking path with the backported kernel support.
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.kernel.ebpf.supported=1
+
+# Explicit ARM32 opt-in; keep the actual kernel release for ELF selection.
+PRODUCT_SYSTEM_DEFAULT_PROPERTIES += ro.bpf.allow_32bit=true

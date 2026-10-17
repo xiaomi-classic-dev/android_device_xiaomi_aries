@@ -17,4 +17,4 @@ PRODUCT_MAKEFILES := \
     $(LOCAL_DIR)/lineage_aries.mk
 
 COMMON_LUNCH_CHOICES := \
-    lineage_aries-bp1a-userdebug
+    lineage_aries-bp4a-userdebug
