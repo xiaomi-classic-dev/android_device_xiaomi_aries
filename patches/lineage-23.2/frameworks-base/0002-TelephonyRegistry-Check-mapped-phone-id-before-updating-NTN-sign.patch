@@ -1,4 +1,4 @@
-From 1cff1c6c58726e2d885ae552f5c83f3d05537af0 Mon Sep 17 00:00:00 2001
+From e7154714444f7166d4ec45de2e829169bb54bbe3 Mon Sep 17 00:00:00 2001
 From: GuaiYiHu <guaiyihu@foxmail.com>
 Date: Fri, 16 Oct 2026 21:16:54 +0800
 Subject: [PATCH] TelephonyRegistry: Check mapped phone id before updating NTN
@@ -14,10 +14,10 @@ Change-Id: Id4dc541312e29d31071566f1b11954e364eee2a9
  1 file changed, 5 insertions(+)
 
 diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
-index 7a1fc2465f9d..0c080c4cb30e 100644
+index 3d6cbe56f07a..a30dfd1bfaa5 100644
 --- a/services/core/java/com/android/server/TelephonyRegistry.java
 +++ b/services/core/java/com/android/server/TelephonyRegistry.java
-@@ -3890,6 +3890,11 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+@@ -3891,6 +3891,11 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
  
          synchronized (mRecords) {
              int phoneId = getPhoneIdFromSubId(subId);

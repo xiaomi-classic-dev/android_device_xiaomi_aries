@@ -1,22 +1,20 @@
-From d3c4a9ac5ee6fad370825c94c21ec21f609c7273 Mon Sep 17 00:00:00 2001
+From 2388f7daab03b895a283531f663aa89e589ef808 Mon Sep 17 00:00:00 2001
 From: GuaiYiHu <guaiyihu@foxmail.com>
-Date: Fri, 16 Oct 2026 21:16:54 +0800
-Subject: [PATCH] BluetoothPowerStatsCollector: Cover service-unbound activity
- samples
+Date: Sun, 18 Oct 2026 03:58:47 +0800
+Subject: [PATCH] BluetoothPowerStatsCollector: Retain service-unbound
+ regression on Android 16
 
-Exercise asynchronous error 9 with the actual collector in addition to
-the upstream FEATURE_NOT_SUPPORTED regression and existing valid samples.
-
-Change-Id: Ic464c78a0d88c1123e5bbf1e07c43abb3cea0211
+Adapted-from: d3c4a9ac5ee6fad370825c94c21ec21f609c7273
+Change-Id: I67347fc8145af9d330af9596e2a943d08bfe0ae2
 ---
- .../BluetoothPowerStatsCollectorTest.java      | 18 ++++++++++++++++++
- 1 file changed, 18 insertions(+)
+ .../stats/BluetoothPowerStatsCollectorTest.java    | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
 
 diff --git a/services/tests/powerstatstests/src/com/android/server/power/stats/BluetoothPowerStatsCollectorTest.java b/services/tests/powerstatstests/src/com/android/server/power/stats/BluetoothPowerStatsCollectorTest.java
-index 8c3cb53292e7..ee46c0c3944a 100644
+index 222a1f7e2c6d..f22892ca365c 100644
 --- a/services/tests/powerstatstests/src/com/android/server/power/stats/BluetoothPowerStatsCollectorTest.java
 +++ b/services/tests/powerstatstests/src/com/android/server/power/stats/BluetoothPowerStatsCollectorTest.java
-@@ -234,6 +234,24 @@ public class BluetoothPowerStatsCollectorTest {
+@@ -224,6 +224,20 @@ public class BluetoothPowerStatsCollectorTest {
          assertThat(layout.getDeviceIdleTime(powerStats.stats)).isEqualTo(0);
      }
  
@@ -24,15 +22,11 @@ index 8c3cb53292e7..ee46c0c3944a 100644
 +    public void ignoreProfileServiceNotBoundError() {
 +        when(mConsumedEnergyRetriever.getEnergyConsumerIds(EnergyConsumerType.BLUETOOTH))
 +                .thenReturn(new int[0]);
-+
 +        mBluetoothActivityEnergyInfoError = BluetoothStatusCodes.ERROR_PROFILE_SERVICE_NOT_BOUND;
-+
-+        BluetoothPowerStatsCollector collector = new BluetoothPowerStatsCollector(mInjector);
++        BluetoothPowerStatsCollector collector = new BluetoothPowerStatsCollector(mInjector, null);
 +        collector.setEnabled(true);
-+
 +        PowerStats powerStats = collector.collectStats();
 +        BluetoothPowerStatsLayout layout = new BluetoothPowerStatsLayout(powerStats.descriptor);
-+
 +        assertThat(layout.getDeviceRxTime(powerStats.stats)).isEqualTo(0);
 +        assertThat(layout.getDeviceTxTime(powerStats.stats)).isEqualTo(0);
 +        assertThat(layout.getDeviceIdleTime(powerStats.stats)).isEqualTo(0);

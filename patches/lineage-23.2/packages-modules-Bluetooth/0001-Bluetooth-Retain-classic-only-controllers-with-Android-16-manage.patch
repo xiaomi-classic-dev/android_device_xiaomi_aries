@@ -1,0 +1,535 @@
+From b24b16c9300a0b7fbf111ec627a8b493c12b93b1 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 03:58:49 +0800
+Subject: [PATCH] Bluetooth: Retain classic-only controllers with Android 16
+ managers
+
+Adapted-from: 1cdf9d0f16cb71ed0784082f2f6512685ec879cf
+Adapted-from: c1878335d5177561d8b92356753e6858b9833ae4
+Adapted-from: 1ed6418e42a0cd8784ce3c3053cc78f3074c5cc5
+Keep LE-capable startup ordered, BR/EDR SSP and current dual-PHY callbacks.
+
+Change-Id: I3ad9ab43293193fd234067d3403a8966ad08ffd9
+---
+ system/bta/dm/bta_dm_act.cc                  |  14 +-
+ system/bta/dm/bta_dm_sec.cc                  |   7 +-
+ system/btif/src/btif_core.cc                 |   8 +-
+ system/gd/hci/controller_impl.cc             | 235 ++++++++++---------
+ system/gd/hci/le_advertising_manager_impl.cc |  10 +-
+ system/gd/hci/le_scanning_manager_impl.cc    |  24 +-
+ system/stack/btm/btm_sec.cc                  |   3 +-
+ 7 files changed, 181 insertions(+), 120 deletions(-)
+
+diff --git a/system/bta/dm/bta_dm_act.cc b/system/bta/dm/bta_dm_act.cc
+index 18a5b6baef..df399f957c 100644
+--- a/system/bta/dm/bta_dm_act.cc
++++ b/system/bta/dm/bta_dm_act.cc
+@@ -274,7 +274,7 @@ void BTA_dm_on_hw_on() {
+   get_btm_client_interface().link_policy.BTM_WritePageTimeout(
+           osi_property_get_int32(PROPERTY_PAGE_TIMEOUT, p_bta_dm_cfg->page_timeout));
+ 
+-  if (ble_vnd_is_included()) {
++  if (bluetooth::shim::GetController()->SupportsBle() && ble_vnd_is_included()) {
+     get_btm_client_interface().ble.BTM_BleReadControllerFeatures(
+             bta_dm_ctrl_features_rd_cmpl_cback);
+   } else {
+@@ -289,10 +289,18 @@ void BTA_dm_on_hw_on() {
+     bta_dm_acl_cb.p_acl_cback(BTA_DM_LPP_OFFLOAD_FEATURES_READ, NULL);
+   }
+ 
+-  btm_ble_scanner_init();
++  if (bluetooth::shim::GetController()->SupportsBle()) {
++    btm_ble_scanner_init();
++  }
+ 
+   // Synchronize with the controller before continuing
+-  bta_dm_le_rand(get_main_thread()->BindOnce([](uint64_t /*value*/) { BTIF_dm_enable(); }));
++  auto on_controller_synced =
++          get_main_thread()->BindOnce([](uint64_t /*value*/) { BTIF_dm_enable(); });
++  if (bluetooth::shim::GetController()->SupportsBle()) {
++    bta_dm_le_rand(std::move(on_controller_synced));
++  } else {
++    std::move(on_controller_synced)(0);
++  }
+ 
+   bta_sys_rm_register(bta_dm_rm_cback);
+ 
+diff --git a/system/bta/dm/bta_dm_sec.cc b/system/bta/dm/bta_dm_sec.cc
+index 4000490c36..822636b194 100644
+--- a/system/bta/dm/bta_dm_sec.cc
++++ b/system/bta/dm/bta_dm_sec.cc
+@@ -28,6 +28,8 @@
+ #include "bta/include/bta_dm_ci.h"  // bta_dm_ci_rmt_oob
+ #include "btif/include/btif_dm.h"
+ #include "internal_include/bt_target.h"
++#include "hci/controller.h"
++#include "main/shim/entry.h"
+ #include "stack/include/bt_dev_class.h"
+ #include "stack/include/btm_ble_sec_api_types.h"
+ #include "stack/include/btm_client_interface.h"
+@@ -1012,7 +1014,10 @@ void bta_dm_ble_confirm_reply(const RawAddress& bd_addr, bool accept) {
+ }
+ 
+ /** This function set the local device LE privacy settings. */
+-void bta_dm_ble_config_local_privacy(bool privacy_enable) { BTM_BleConfigPrivacy(privacy_enable); }
++void bta_dm_ble_config_local_privacy(bool privacy_enable) {
++  if (!bluetooth::shim::GetController()->SupportsBle()) return;
++  BTM_BleConfigPrivacy(privacy_enable);
++}
+ 
+ namespace bluetooth {
+ namespace legacy {
+diff --git a/system/btif/src/btif_core.cc b/system/btif/src/btif_core.cc
+index c0e61bff16..4075c584ff 100644
+--- a/system/btif/src/btif_core.cc
++++ b/system/btif/src/btif_core.cc
+@@ -442,7 +442,13 @@ void btif_get_adapter_property(bt_property_type_t type) {
+   };
+   if (prop.type == BT_PROPERTY_LOCAL_LE_FEATURES) {
+     tBTM_BLE_VSC_CB cmn_vsc_cb;
+-    bt_local_le_features_t local_le_features;
++    bt_local_le_features_t local_le_features = {};
++    if (!bluetooth::shim::GetController()->SupportsBle()) {
++      prop.len = sizeof(local_le_features);
++      memcpy(prop.val, &local_le_features, prop.len);
++      GetInterfaceToProfiles()->events->invoke_adapter_properties_cb(status, 1, &prop);
++      return;
++    }
+ 
+     /* LE features are not stored in storage. Should be retrieved from stack
+      */
+diff --git a/system/gd/hci/controller_impl.cc b/system/gd/hci/controller_impl.cc
+index 69b2294bbe..c024d3a55c 100644
+--- a/system/gd/hci/controller_impl.cc
++++ b/system/gd/hci/controller_impl.cc
+@@ -64,9 +64,7 @@ struct ControllerImpl::impl {
+             handler_->BindOn(this, &ControllerImpl::impl::NumberOfCompletedPackets));
+ 
+     set_event_mask(kDefaultEventMask);
+-    set_event_mask_page_2(kDefaultEventMaskPage2);
+ 
+-    write_le_host_support(Enable::ENABLED, Enable::DISABLED);
+     hci_->EnqueueCommand(
+             ReadLocalNameBuilder::Create(),
+             handler_->BindOnceOn(this, &ControllerImpl::impl::read_local_name_complete_handler));
+@@ -79,15 +77,6 @@ struct ControllerImpl::impl {
+             handler_->BindOnceOn(
+                     this, &ControllerImpl::impl::read_local_supported_commands_complete_handler));
+ 
+-    hci_->EnqueueCommand(
+-            LeReadLocalSupportedFeaturesBuilder::Create(),
+-            handler_->BindOnceOn(this,
+-                                 &ControllerImpl::impl::le_read_local_supported_features_handler));
+-
+-    hci_->EnqueueCommand(
+-            LeReadSupportedStatesBuilder::Create(),
+-            handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_supported_states_handler));
+-
+     // Wait for all extended features read
+     std::promise<void> features_promise;
+     auto features_future = features_promise.get_future();
+@@ -98,13 +87,29 @@ struct ControllerImpl::impl {
+                     this, &ControllerImpl::impl::read_local_extended_features_complete_handler,
+                     std::move(features_promise)));
+     features_future.wait();
++    if (is_supported(OpCode::SET_EVENT_MASK_PAGE_2)) {
++      set_event_mask_page_2(kDefaultEventMaskPage2);
++    }
+ 
+-    if (module_.SupportsBleChannelSounding()) {
+-      le_set_event_mask(MaskLeEventMask(local_version_information_.hci_version_,
+-                                        kDefaultLeEventMask | kLeCSEventMask));
+-    } else {
+-      le_set_event_mask(
+-              MaskLeEventMask(local_version_information_.hci_version_, kDefaultLeEventMask));
++    if (module_.SupportsBle()) {
++      write_le_host_support(Enable::ENABLED, Enable::DISABLED);
++      hci_->EnqueueCommand(
++              LeReadLocalSupportedFeaturesBuilder::Create(),
++              handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_local_supported_features_handler));
++      std::promise<void> le_features_promise;
++      auto le_features_future = le_features_promise.get_future();
++      hci_->EnqueueCommand(
++              LeReadSupportedStatesBuilder::Create(),
++              handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_supported_states_handler,
++                                   std::move(le_features_promise)));
++      le_features_future.wait();
++      if (module_.SupportsBleChannelSounding()) {
++        le_set_event_mask(MaskLeEventMask(local_version_information_.hci_version_,
++                                          kDefaultLeEventMask | kLeCSEventMask));
++      } else {
++        le_set_event_mask(
++                MaskLeEventMask(local_version_information_.hci_version_, kDefaultLeEventMask));
++      }
+     }
+ 
+     hci_->EnqueueCommand(
+@@ -123,14 +128,16 @@ struct ControllerImpl::impl {
+                                    &ControllerImpl::impl::set_min_encryption_key_size_handler));
+     }
+ 
+-    if (is_supported(OpCode::LE_READ_BUFFER_SIZE_V2)) {
+-      hci_->EnqueueCommand(
+-              LeReadBufferSizeV2Builder::Create(),
+-              handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_buffer_size_v2_handler));
+-    } else {
+-      hci_->EnqueueCommand(
+-              LeReadBufferSizeV1Builder::Create(),
+-              handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_buffer_size_handler));
++    if (module_.SupportsBle()) {
++      if (is_supported(OpCode::LE_READ_BUFFER_SIZE_V2)) {
++        hci_->EnqueueCommand(
++                LeReadBufferSizeV2Builder::Create(),
++                handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_buffer_size_v2_handler));
++      } else {
++        hci_->EnqueueCommand(
++                LeReadBufferSizeV1Builder::Create(),
++                handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_buffer_size_handler));
++      }
+     }
+ 
+     if (is_supported(OpCode::READ_LOCAL_SUPPORTED_CODECS_V1)) {
+@@ -140,32 +147,34 @@ struct ControllerImpl::impl {
+                                    &ControllerImpl::impl::read_local_supported_codecs_v1_handler));
+     }
+ 
+-    hci_->EnqueueCommand(
+-            LeReadFilterAcceptListSizeBuilder::Create(),
+-            handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_accept_list_size_handler));
+-
+-    if (is_supported(OpCode::LE_READ_RESOLVING_LIST_SIZE) && module_.SupportsBlePrivacy()) {
++    if (module_.SupportsBle()) {
+       hci_->EnqueueCommand(
+-              LeReadResolvingListSizeBuilder::Create(),
+-              handler_->BindOnceOn(this,
+-                                   &ControllerImpl::impl::le_read_resolving_list_size_handler));
+-    } else {
+-      log::info("LE_READ_RESOLVING_LIST_SIZE not supported, defaulting to 0");
+-      le_resolving_list_size_ = 0;
+-    }
++              LeReadFilterAcceptListSizeBuilder::Create(),
++              handler_->BindOnceOn(this, &ControllerImpl::impl::le_read_accept_list_size_handler));
++
++      if (is_supported(OpCode::LE_READ_RESOLVING_LIST_SIZE) && module_.SupportsBlePrivacy()) {
++        hci_->EnqueueCommand(
++                LeReadResolvingListSizeBuilder::Create(),
++                handler_->BindOnceOn(this,
++                                     &ControllerImpl::impl::le_read_resolving_list_size_handler));
++      } else {
++        log::info("LE_READ_RESOLVING_LIST_SIZE not supported, defaulting to 0");
++        le_resolving_list_size_ = 0;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_MAXIMUM_DATA_LENGTH) &&
+-        module_.SupportsBleDataPacketLengthExtension()) {
+-      hci_->EnqueueCommand(
+-              LeReadMaximumDataLengthBuilder::Create(),
+-              handler_->BindOnceOn(this,
+-                                   &ControllerImpl::impl::le_read_maximum_data_length_handler));
+-    } else {
+-      log::info("LE_READ_MAXIMUM_DATA_LENGTH not supported, defaulting to 0");
+-      le_maximum_data_length_.supported_max_rx_octets_ = 0;
+-      le_maximum_data_length_.supported_max_rx_time_ = 0;
+-      le_maximum_data_length_.supported_max_tx_octets_ = 0;
+-      le_maximum_data_length_.supported_max_tx_time_ = 0;
++      if (is_supported(OpCode::LE_READ_MAXIMUM_DATA_LENGTH) &&
++          module_.SupportsBleDataPacketLengthExtension()) {
++        hci_->EnqueueCommand(
++                LeReadMaximumDataLengthBuilder::Create(),
++                handler_->BindOnceOn(this,
++                                     &ControllerImpl::impl::le_read_maximum_data_length_handler));
++      } else {
++        log::info("LE_READ_MAXIMUM_DATA_LENGTH not supported, defaulting to 0");
++        le_maximum_data_length_.supported_max_rx_octets_ = 0;
++        le_maximum_data_length_.supported_max_rx_time_ = 0;
++        le_maximum_data_length_.supported_max_tx_octets_ = 0;
++        le_maximum_data_length_.supported_max_tx_time_ = 0;
++      }
+     }
+ 
+     // SSP is managed by security layer once enabled
+@@ -177,71 +186,73 @@ struct ControllerImpl::impl {
+                                    &ControllerImpl::impl::
+                                            write_secure_connections_host_support_complete_handler));
+     }
+-    if (is_supported(OpCode::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH) &&
+-        module_.SupportsBleDataPacketLengthExtension()) {
+-      hci_->EnqueueCommand(
+-              LeReadSuggestedDefaultDataLengthBuilder::Create(),
+-              handler_->BindOnceOn(
+-                      this, &ControllerImpl::impl::le_read_suggested_default_data_length_handler));
+-    } else {
+-      log::info("LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH not supported, defaulting to 27 (0x1B)");
+-      le_suggested_default_data_length_ = 27;
+-    }
++    if (module_.SupportsBle()) {
++      if (is_supported(OpCode::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH) &&
++          module_.SupportsBleDataPacketLengthExtension()) {
++        hci_->EnqueueCommand(
++                LeReadSuggestedDefaultDataLengthBuilder::Create(),
++                handler_->BindOnceOn(
++                        this, &ControllerImpl::impl::le_read_suggested_default_data_length_handler));
++      } else {
++        log::info("LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH not supported, defaulting to 27 (0x1B)");
++        le_suggested_default_data_length_ = 27;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH) &&
+-        module_.SupportsBleExtendedAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadMaximumAdvertisingDataLengthBuilder::Create(),
+-              handler_->BindOnceOn(
+-                      this,
+-                      &ControllerImpl::impl::le_read_maximum_advertising_data_length_handler));
+-    } else {
+-      log::info("LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH not supported, defaulting to 31 (0x1F)");
+-      le_maximum_advertising_data_length_ = 31;
+-    }
++      if (is_supported(OpCode::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH) &&
++          module_.SupportsBleExtendedAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadMaximumAdvertisingDataLengthBuilder::Create(),
++                handler_->BindOnceOn(
++                        this,
++                        &ControllerImpl::impl::le_read_maximum_advertising_data_length_handler));
++      } else {
++        log::info("LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH not supported, defaulting to 31 (0x1F)");
++        le_maximum_advertising_data_length_ = 31;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS) &&
+-        module_.SupportsBleExtendedAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadNumberOfSupportedAdvertisingSetsBuilder::Create(),
+-              handler_->BindOnceOn(
+-                      this,
+-                      &ControllerImpl::impl::le_read_number_of_supported_advertising_sets_handler));
+-    } else {
+-      log::info("LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS not supported, defaulting to 1");
+-      le_number_supported_advertising_sets_ = 1;
+-    }
++      if (is_supported(OpCode::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS) &&
++          module_.SupportsBleExtendedAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadNumberOfSupportedAdvertisingSetsBuilder::Create(),
++                handler_->BindOnceOn(
++                        this,
++                        &ControllerImpl::impl::le_read_number_of_supported_advertising_sets_handler));
++      } else {
++        log::info("LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS not supported, defaulting to 1");
++        le_number_supported_advertising_sets_ = 1;
++      }
+ 
+-    if (is_supported(OpCode::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE) &&
+-        module_.SupportsBlePeriodicAdvertising()) {
+-      hci_->EnqueueCommand(
+-              LeReadPeriodicAdvertiserListSizeBuilder::Create(),
+-              handler_->BindOnceOn(
+-                      this, &ControllerImpl::impl::le_read_periodic_advertiser_list_size_handler));
+-    } else {
+-      log::info("LE_READ_PERIODIC_ADVERTISER_LIST_SIZE not supported, defaulting to 0");
+-      le_periodic_advertiser_list_size_ = 0;
+-    }
+-    if (is_supported(OpCode::LE_SET_HOST_FEATURE) &&
+-        module_.SupportsBleConnectedIsochronousStreamCentral()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTED_ISO_STREAM_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
+-    }
++      if (is_supported(OpCode::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE) &&
++          module_.SupportsBlePeriodicAdvertising()) {
++        hci_->EnqueueCommand(
++                LeReadPeriodicAdvertiserListSizeBuilder::Create(),
++                handler_->BindOnceOn(
++                        this, &ControllerImpl::impl::le_read_periodic_advertiser_list_size_handler));
++      } else {
++        log::info("LE_READ_PERIODIC_ADVERTISER_LIST_SIZE not supported, defaulting to 0");
++        le_periodic_advertiser_list_size_ = 0;
++      }
++      if (is_supported(OpCode::LE_SET_HOST_FEATURE) &&
++          module_.SupportsBleConnectedIsochronousStreamCentral()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTED_ISO_STREAM_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
++      }
+ 
+-    if (is_supported(OpCode::LE_SET_HOST_FEATURE) && module_.SupportsBleConnectionSubrating()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTION_SUBRATING_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
+-    }
++      if (is_supported(OpCode::LE_SET_HOST_FEATURE) && module_.SupportsBleConnectionSubrating()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CONNECTION_SUBRATING_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
++      }
+ 
+-    if (module_.SupportsBleChannelSounding()) {
+-      hci_->EnqueueCommand(
+-              LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CHANNEL_SOUNDING_HOST_SUPPORT,
+-                                              Enable::ENABLED),
+-              handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
++      if (module_.SupportsBleChannelSounding()) {
++        hci_->EnqueueCommand(
++                LeSetHostFeatureBuilder::Create(LeHostFeatureBits::CHANNEL_SOUNDING_HOST_SUPPORT,
++                                                Enable::ENABLED),
++                handler_->BindOnceOn(this, &ControllerImpl::impl::le_set_host_feature_handler));
++      }
+     }
+ 
+     if (is_supported(OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING)) {
+@@ -252,7 +263,8 @@ struct ControllerImpl::impl {
+     }
+ 
+     // Skip vendor capabilities check if configured.
+-    if (os::GetSystemPropertyBool(kPropertyVendorCapabilitiesEnabled,
++    if (module_.SupportsBle() &&
++        os::GetSystemPropertyBool(kPropertyVendorCapabilitiesEnabled,
+                                   kDefaultVendorCapabilitiesEnabled)) {
+       // More commands can be enqueued from le_get_vendor_capabilities_handler
+       std::promise<void> vendor_promise;
+@@ -540,12 +552,13 @@ struct ControllerImpl::impl {
+     le_local_supported_features_ = complete_view.GetLeFeatures();
+   }
+ 
+-  void le_read_supported_states_handler(CommandCompleteView view) {
++  void le_read_supported_states_handler(CommandCompleteView view, std::promise<void> promise) {
+     auto complete_view = LeReadSupportedStatesCompleteView::Create(view);
+     ASSERT(complete_view.IsValid());
+     ErrorCode status = complete_view.GetStatus();
+     log::assert_that(status == ErrorCode::SUCCESS, "Status {}", ErrorCodeText(status));
+     le_supported_states_ = complete_view.GetLeStates();
++    promise.set_value();
+   }
+ 
+   void le_read_accept_list_size_handler(CommandCompleteView view) {
+diff --git a/system/gd/hci/le_advertising_manager_impl.cc b/system/gd/hci/le_advertising_manager_impl.cc
+index 7967fb2870..e053edc331 100644
+--- a/system/gd/hci/le_advertising_manager_impl.cc
++++ b/system/gd/hci/le_advertising_manager_impl.cc
+@@ -153,6 +153,11 @@ struct LeAdvertisingManagerImpl::impl : public bluetooth::hci::LeAddressManagerC
+     le_maximum_advertising_data_length_ = controller_->GetLeMaximumAdvertisingDataLength();
+ 
+     num_instances_ = controller_->GetLeNumberOfSupportedAdvertisingSets();
++    if (!controller_->SupportsBle()) {
++      num_instances_ = 0;
++      log::info("Controller has no LE advertising capability");
++      return;
++    }
+ 
+     le_advertising_interface_ = hci_->GetLeAdvertisingInterface(
+             handler_->BindOn(this, &LeAdvertisingManagerImpl::impl::handle_event));
+@@ -181,7 +186,8 @@ struct LeAdvertisingManagerImpl::impl : public bluetooth::hci::LeAddressManagerC
+   }
+ 
+   ~impl() {
+-    if (com_android_bluetooth_flags_fix_event_handler_reg_and_dereg()) {
++    if (le_advertising_interface_ != nullptr &&
++        com_android_bluetooth_flags_fix_event_handler_reg_and_dereg()) {
+       hci_->ReleaseLeAdvertisingInterface();
+     }
+ 
+@@ -1576,7 +1582,7 @@ struct LeAdvertisingManagerImpl::impl : public bluetooth::hci::LeAddressManagerC
+   uint16_t le_maximum_advertising_data_length_;
+   int8_t le_physical_channel_tx_power_ = 0;
+   int8_t le_tx_path_loss_comp_ = 0;
+-  hci::LeAdvertisingInterface* le_advertising_interface_;
++  hci::LeAdvertisingInterface* le_advertising_interface_ = nullptr;
+   std::map<AdvertiserId, Advertiser> advertising_sets_;
+   std::map<AdvertiserId, RemovedAdvertiser> removed_advertising_sets_;
+   bool address_manager_registered = false;
+diff --git a/system/gd/hci/le_scanning_manager_impl.cc b/system/gd/hci/le_scanning_manager_impl.cc
+index 684f7b174b..13c80fc955 100644
+--- a/system/gd/hci/le_scanning_manager_impl.cc
++++ b/system/gd/hci/le_scanning_manager_impl.cc
+@@ -168,6 +168,10 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+     controller_ = controller;
+     storage_module_ = storage_module;
+     le_address_manager_ = le_address_manager;
++    if (!controller_->SupportsBle()) {
++      log::info("Controller has no LE scanning capability");
++      return;
++    }
+     le_scanning_interface_ = hci_layer_->GetLeScanningInterface(
+             handler_->BindOn(this, &LeScanningManagerImpl::impl::handle_scan_results));
+     periodic_sync_manager_.Init(le_scanning_interface_, handler_);
+@@ -231,6 +235,7 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+   }
+ 
+   void stop() {
++    if (le_scanning_interface_ == nullptr) return;
+     if (com_android_bluetooth_flags_fix_event_handler_reg_and_dereg()) {
+       hci_layer_->ReleaseLeScanningInterface();
+     } else {
+@@ -531,6 +536,10 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+   }
+ 
+   void register_scanner(const Uuid app_uuid) {
++    if (le_scanning_interface_ == nullptr) {
++      scanning_callbacks_->OnScannerRegistered(app_uuid, 0x00, ScanningCallback::INTERNAL_ERROR);
++      return;
++    }
+     for (uint8_t i = 1; i <= kMaxAppNum; i++) {
+       if (scanners_[i].in_use && scanners_[i].app_uuid == app_uuid) {
+         log::error("Application already registered {}", app_uuid.ToString());
+@@ -557,6 +566,7 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+   }
+ 
+   void unregister_scanner(ScannerId scanner_id) {
++    if (le_scanning_interface_ == nullptr) return;
+     if (scanner_id <= 0 || scanner_id > kMaxAppNum) {
+       log::warn("Invalid scanner id");
+       return;
+@@ -572,6 +582,7 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+   }
+ 
+   void scan(bool start) {
++    if (le_scanning_interface_ == nullptr) return;
+     // On-resume flag should always be reset if there is an explicit start/stop call.
+     scan_on_resume_ = false;
+     if (start) {
+@@ -656,6 +667,17 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+                            uint16_t scan_window_1m, ScannerId scanner_id_coded,
+                            uint16_t scan_interval_coded, uint16_t scan_window_coded,
+                            uint8_t scan_phy) {
++    if (le_scanning_interface_ == nullptr) {
++      if (scan_phy & k1mPhyMask) {
++        scanning_callbacks_->OnSetScannerParameterComplete(scanner_id_1m,
++                                                           ScanningCallback::ILLEGAL_PARAMETER);
++      }
++      if (scan_phy & kCodedPhyMask) {
++        scanning_callbacks_->OnSetScannerParameterComplete(scanner_id_coded,
++                                                           ScanningCallback::ILLEGAL_PARAMETER);
++      }
++      return;
++    }
+     bool requested_1m = (scan_phy & k1mPhyMask) != 0;
+     bool requested_coded = (scan_phy & kCodedPhyMask) != 0;
+     if (requested_1m &&
+@@ -1651,7 +1673,7 @@ struct LeScanningManagerImpl::impl : public LeAddressManagerCallback {
+   AclManagerLe* acl_manager_;
+   ScanApiType api_type_;
+   storage::StorageModule* storage_module_;
+-  LeScanningInterface* le_scanning_interface_;
++  LeScanningInterface* le_scanning_interface_ = nullptr;
+   LeAddressManager* le_address_manager_;
+   bool address_manager_registered_ = false;
+   NullScanningCallback null_scanning_callback_;
+diff --git a/system/stack/btm/btm_sec.cc b/system/stack/btm/btm_sec.cc
+index 3d2d32e484..fb97ddacaf 100644
+--- a/system/stack/btm/btm_sec.cc
++++ b/system/stack/btm/btm_sec.cc
+@@ -236,7 +236,8 @@ bool BTM_SecRegister(const tBTM_APPL_INFO* p_cb_info) {
+     SMP_Register(btm_proc_smp_cback);
+     Octet16 zero{0};
+     /* if no IR is loaded, need to regenerate all the keys */
+-    if (btm_sec_cb.devcb.id_keys.ir == zero) {
++    if (bluetooth::shim::GetController()->SupportsBle() &&
++        btm_sec_cb.devcb.id_keys.ir == zero) {
+       btm_ble_reset_id();
+     }
+   } else {

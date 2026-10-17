@@ -1,9 +1,0 @@
-bionic/0001-linker-Admit-scoped-MiOne-non-PIE-daemons-in-the-sta.patch
-frameworks-base/0005-TelephonyRegistry-Check-mapped-phone-id-before-updat.patch
-frameworks-base/0006-BluetoothPowerStatsCollector-Cover-service-unbound-a.patch
-packages-modules-Bluetooth/0001-Bluetooth-Initialize-LE-capabilities-only-for-capable-Android-15.patch
-packages-modules-Bluetooth/0002-Bluetooth-Keep-classic-only-startup-free-of-LE-identity-and-scan.patch
-packages-modules-Bluetooth/0003-Bluetooth-Keep-Android-15-LE-managers-inactive-on-classic-contro.patch
-system-sepolicy/0001-sepolicy-allow-non-Treble-audioserver-to-publish-the-HIDL-audio-.patch
-hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v3-only-with-a-compatible-HAL-table.patch
-hardware-broadcom-wlan/0002-bcmdhd-Normalize-successful-legacy-BTCOEXMODE-replie.patch

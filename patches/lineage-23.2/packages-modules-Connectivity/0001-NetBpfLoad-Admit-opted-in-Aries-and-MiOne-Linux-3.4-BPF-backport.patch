@@ -1,0 +1,115 @@
+From d1a66d463f85ff5bff054b34a88451aaa7f00282 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 03:58:49 +0800
+Subject: [PATCH] NetBpfLoad: Admit opted-in Aries and MiOne Linux 3.4 BPF
+ backports
+
+Select only the two product builds and their real ARM32 3.4 kernels.
+Retain all BPF loads, verifier errors, required programs, map probes and
+completion checks. Do not override kernel version or choose newer ELF
+variants. Other product builds retain their original minimum versions.
+
+Change-Id: I1a6e4d6e122f294cb1700ce9529b553abace1987
+---
+ bpf/loader/Android.bp     | 19 ++++++++++++++++++-
+ bpf/loader/NetBpfLoad.cpp | 28 ++++++++++++++++++++++++----
+ 2 files changed, 42 insertions(+), 5 deletions(-)
+
+diff --git a/bpf/loader/Android.bp b/bpf/loader/Android.bp
+index 7629d9ee07..6dca6f0313 100644
+--- a/bpf/loader/Android.bp
++++ b/bpf/loader/Android.bp
+@@ -30,10 +30,27 @@ install_symlink {
+     required: ["bpfloader"],
+ }
+ 
++soong_config_module_type {
++    name: "netbpfload_legacy_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "netbpfload",
++    bool_variables: ["legacy_kernel"],
++    properties: ["cflags"],
++}
++
++netbpfload_legacy_cc_defaults {
++    name: "netbpfload_legacy_defaults",
++    soong_config_variables: {
++        legacy_kernel: {
++            cflags: ["-DNETBPFLOAD_LEGACY_BACKPORT=1"],
++        },
++    },
++}
++
+ cc_binary {
+     name: "netbpfload",
+ 
+-    defaults: ["bpf_cc_defaults"],
++    defaults: ["bpf_cc_defaults", "netbpfload_legacy_defaults"],
+     sanitize: {
+         integer_overflow: true,
+     },
+diff --git a/bpf/loader/NetBpfLoad.cpp b/bpf/loader/NetBpfLoad.cpp
+index 29f349b387..d0709bfeb5 100644
+--- a/bpf/loader/NetBpfLoad.cpp
++++ b/bpf/loader/NetBpfLoad.cpp
+@@ -93,6 +93,20 @@ static bool allow32BitKernel() {
+            android::base::GetBoolProperty("ro.bpf.allow_32bit", false);
+ }
+ 
++// These two ARM32 products carry the real Linux 3.4 BPF backport.  Keep
++// kernelVersion() unchanged so ELF program selection and map sanitization use
++// the real kernel.  This only admits them to the loader; all BPF syscalls,
++// verifier failures, required maps/programs and final completion remain fatal.
++static bool allowLegacyBpfBackport() {
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++    const auto device = android::base::GetProperty("ro.product.device", "");
++    return allow32BitKernel() && isKernelVersion(3, 4) &&
++           (device == "aries" || device == "mione_plus");
++#else
++    return false;
++#endif
++}
++
+ // This verifies the macro and the C++ api are in sync, and that they're compile time known.
+ constexpr auto useLibBpf = COM_ANDROID_TETHERING_READONLY_FLAGS_USE_LIBBPF;
+ static_assert(std::is_same<decltype(useLibBpf), const bool>::value, "useLibBpf must be a boolean.");
+@@ -1614,29 +1628,35 @@ static int doLoad(char** argv, char * const envp[]) {
+ 
+     logTetheringApexVersion();
+ 
++    const bool legacyBpfBackport = allowLegacyBpfBackport();
++    if (legacyBpfBackport) {
++        ALOGW("Loading BPF on the opted-in Linux 3.4 backport; real kernel version %07x.",
++              kernelVersion());
++    }
++
+     // both S and T require kernel 4.9 (and eBpf support)
+     // (this also guarantees 'kernelVer' isn't an invalid uninitialized 0)
+-    if (!isAtLeastKernelVersion(4, 9)) {
++    if (!isAtLeastKernelVersion(4, 9) && !legacyBpfBackport) {
+         ALOGE("Android S & T require kernel 4.9.");
+         return 3;
+     }
+ 
+     // U bumps the kernel requirement up to 4.14
+-    if (isAtLeastU && !isAtLeastKernelVersion(4, 14)) {
++    if (isAtLeastU && !isAtLeastKernelVersion(4, 14) && !legacyBpfBackport) {
+         ALOGE("Android U requires kernel 4.14.");
+         return 4;
+     }
+ 
+     // V bumps the kernel requirement up to 4.19
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel419
+-    if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
++    if (isAtLeastV && !isAtLeastKernelVersion(4, 19) && !legacyBpfBackport) {
+         ALOGE("Android V requires kernel 4.19.");
+         return 5;
+     }
+ 
+     // 25Q2 bumps the kernel requirement up to 5.4
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel54
+-    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
++    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4) && !legacyBpfBackport) {
+         ALOGE("Android 25Q2 requires kernel 5.4.");
+         return 6;
+     }

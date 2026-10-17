@@ -1,0 +1,51 @@
+From a6b6e1dcb639554caf2eef122f77bd0f3bdcf42f Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 03:58:49 +0800
+Subject: [PATCH] bcmdhd: Register RTT v4 only with a compatible HAL table
+
+Adapted-from: 494c8845648bb6cbea1493dfa4d899da032eb677
+Keep the legacy table ABI and modern dispatch unchanged.
+
+Change-Id: I6f33b6b636da2a0f284be1bb6bb054d7c194969e
+---
+ bcmdhd/wifi_hal/wifi_hal.cpp | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/bcmdhd/wifi_hal/wifi_hal.cpp b/bcmdhd/wifi_hal/wifi_hal.cpp
+index 404a104..3980c8c 100644
+--- a/bcmdhd/wifi_hal/wifi_hal.cpp
++++ b/bcmdhd/wifi_hal/wifi_hal.cpp
+@@ -256,6 +256,22 @@ static const char *IfaceTypeToString(wifi_interface_type iface_type)
+     }
+ }
+ 
++// Register modern RTT slots only when the selected vendor HAL table has them.
++template <typename HalFn>
++static auto initRttV4Funcs(HalFn *fn, int)
++        -> decltype(fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4,
++                    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4,
++                    void())
++{
++    fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4;
++    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4;
++}
++
++template <typename HalFn>
++static void initRttV4Funcs(HalFn *, long)
++{
++}
++
+ /*initialize function pointer table with Broadcom HHAL API*/
+ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn)
+ {
+@@ -283,9 +299,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn)
+     fn->wifi_set_link_stats = wifi_set_link_stats;
+     fn->wifi_clear_link_stats = wifi_clear_link_stats;
+     fn->wifi_get_valid_channels = wifi_get_valid_channels;
+-    fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4;
++    initRttV4Funcs(fn, 0);
+     fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
+-    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4;
+     fn->wifi_rtt_get_responder_info = wifi_rtt_get_responder_info;
+     fn->wifi_enable_responder = wifi_enable_responder;
+     fn->wifi_disable_responder = wifi_disable_responder;

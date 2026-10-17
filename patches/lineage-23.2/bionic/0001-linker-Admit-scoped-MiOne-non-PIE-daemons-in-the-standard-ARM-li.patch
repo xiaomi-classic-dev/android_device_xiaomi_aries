@@ -1,4 +1,4 @@
-From 1011990f4809c82d081f1549f6ce1003da510d3e Mon Sep 17 00:00:00 2001
+From 727ae3213c75fbbd06b7b7a545ae3137aa879557 Mon Sep 17 00:00:00 2001
 From: GuaiYiHu <guaiyihu@foxmail.com>
 Date: Fri, 16 Oct 2026 21:30:13 +0800
 Subject: [PATCH] linker: Admit scoped MiOne non-PIE daemons in the standard
@@ -19,7 +19,7 @@ Change-Id: I07cb3e488cd53240ee177037fa347e0ef9a2765f
  2 files changed, 47 insertions(+), 1 deletion(-)
 
 diff --git a/linker/Android.bp b/linker/Android.bp
-index 7bdbd331d..710ddea7a 100644
+index 4a24943fe..3fd0689d8 100644
 --- a/linker/Android.bp
 +++ b/linker/Android.bp
 @@ -123,6 +123,23 @@ cc_defaults {
@@ -55,10 +55,10 @@ index 7bdbd331d..710ddea7a 100644
      srcs: ["linker_main.cpp"],
  
 diff --git a/linker/linker_main.cpp b/linker/linker_main.cpp
-index f65f82d5b..29583d26c 100644
+index ce1337c51..8980175ad 100644
 --- a/linker/linker_main.cpp
 +++ b/linker/linker_main.cpp
-@@ -280,6 +280,29 @@ static void platform_properties_init() {
+@@ -294,6 +294,29 @@ static void platform_properties_init() {
  #endif
  }
  
@@ -88,7 +88,7 @@ index f65f82d5b..29583d26c 100644
  static ElfW(Addr) linker_main(KernelArgumentBlock& args, const char* exe_to_load) {
    ProtectedDataGuard guard;
  
-@@ -401,7 +424,12 @@ static ElfW(Addr) linker_main(KernelArgumentBlock& args, const char* exe_to_load
+@@ -422,7 +445,12 @@ static ElfW(Addr) linker_main(KernelArgumentBlock& args, const char* exe_to_load
  
    // For security reasons we dropped non-PIE support in API level 21,
    // and the NDK no longer supports earlier API levels.

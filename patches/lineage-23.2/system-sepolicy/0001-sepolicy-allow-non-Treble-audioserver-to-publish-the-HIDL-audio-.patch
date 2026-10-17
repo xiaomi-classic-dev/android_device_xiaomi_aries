@@ -1,4 +1,4 @@
-From b85f3358d20a06514ebbbb2e05e3c5b681d59cce Mon Sep 17 00:00:00 2001
+From 484fb2eb4d8fb3e358a46a2b5077a4872e65d9bb Mon Sep 17 00:00:00 2001
 From: GuaiYiHu <guaiyihu@foxmail.com>
 Date: Tue, 13 Oct 2026 01:10:21 +0800
 Subject: [PATCH] sepolicy: allow non-Treble audioserver to publish the HIDL

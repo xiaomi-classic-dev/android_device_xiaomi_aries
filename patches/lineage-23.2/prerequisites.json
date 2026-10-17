@@ -1,0 +1,287 @@
+{
+  "port_docs": {
+    "snapshot": "port_docs/docs/manifests/lineage-23.2-source-snapshot.json",
+    "repository_count": 32,
+    "commit_count": 249
+  },
+  "platform_baselines": [
+    {
+      "path": "art",
+      "base_commit": "4f33875b330c405deb7296e7c7321a748ff2c1c7",
+      "baseline_tree": "5da473722d21a2dfa88abfb02411dcef0f33f88b",
+      "patches": []
+    },
+    {
+      "path": "bionic",
+      "base_commit": "bc2f7eb15e58d3e93b0e1afc384e870508ad35e7",
+      "baseline_tree": "1c2c3e88891be14c8aaa81b28ed34bac614694f0",
+      "patches": []
+    },
+    {
+      "path": "build/make",
+      "base_commit": "4ec2058b44bd5032ec38e4a43fa70d163ba2326b",
+      "baseline_tree": "8b8e0505f7f744ce5f062f5645a6583cb803a4e4",
+      "patches": []
+    },
+    {
+      "path": "build/soong",
+      "base_commit": "ed5946aa252849c6d2ff804800b6f19d9cd31423",
+      "baseline_tree": "cc5702d465cff22c1c2848510b2340d6d4297537",
+      "patches": []
+    },
+    {
+      "path": "device/lineage/sepolicy",
+      "base_commit": "16a7bc7fe89e2fe6b286b470e7cad45d0551435a",
+      "baseline_tree": "011b914fbf936a53463b5a2e09db64ab77770239",
+      "patches": []
+    },
+    {
+      "path": "external/jemalloc_new",
+      "base_commit": "00d197c6bb93aa2620db1da58b1a2fabef1f57f5",
+      "baseline_tree": "efd8a2c56889896834abfa6f870b4573b816149e",
+      "patches": []
+    },
+    {
+      "path": "external/perfetto",
+      "base_commit": "f91fc3a571d5acd2b056e72fd28af4f25d039883",
+      "baseline_tree": "ca0d0f16b32143c43e5f8ce07fe8e0125c57b024",
+      "patches": []
+    },
+    {
+      "path": "external/wpa_supplicant_8",
+      "base_commit": "7a0664f9406fe383cb9cbe15e0a53265d756c894",
+      "baseline_tree": "5643645a5c6304c0deccc4ef2abf0089c89809f2",
+      "patches": []
+    },
+    {
+      "path": "frameworks/av",
+      "base_commit": "b4cc258f1a4058afa768cda8fde83cc079eb2d74",
+      "baseline_tree": "c876f4e8a786ee2b13401ce5c6483c01c4349216",
+      "patches": []
+    },
+    {
+      "path": "frameworks/base",
+      "base_commit": "16c4d203b7040477bd70ed5617b3f7f3bda48549",
+      "baseline_tree": "61f308048e9070053a785ffc50ab2967f29bdbd3",
+      "patches": []
+    },
+    {
+      "path": "frameworks/native",
+      "base_commit": "8a0b57e3587f8c3a62b9bb51ba0d538906e29b67",
+      "baseline_tree": "c697ae7bdf91016f7656b04f6d33d119a603aeb3",
+      "patches": []
+    },
+    {
+      "path": "frameworks/opt/net/wifi",
+      "base_commit": "6475f6c5cd3ee7a2ab539e57f2c89de1791eadee",
+      "baseline_tree": "00d4435682970690c22a7be09f6a460ac197f291",
+      "patches": []
+    },
+    {
+      "path": "frameworks/opt/telephony",
+      "base_commit": "163e63be8bab50f6fa6e39d341faf4e89c38aefd",
+      "baseline_tree": "907faa439efaf4e8d07a64e766e4cad0cd98acfa",
+      "patches": []
+    },
+    {
+      "path": "hardware/broadcom/wlan",
+      "base_commit": "f347e286cd515b5afc16926d03d159273439719e",
+      "baseline_tree": "fc3788c9f334422b3c985a84e6af17073bee5eba",
+      "patches": []
+    },
+    {
+      "path": "hardware/interfaces",
+      "base_commit": "6a5e709bf344a2af7b0009943435af3d070a8e8e",
+      "baseline_tree": "260cd24837d0f6ef3cfaa4211e1312b74c4860fe",
+      "patches": []
+    },
+    {
+      "path": "hardware/libhardware",
+      "base_commit": "c50a30850e16be224b32f093f9f622cdafb63806",
+      "baseline_tree": "2bc7daaa9d2aedb18d6bd6142e9942f99b5ec07a",
+      "patches": []
+    },
+    {
+      "path": "hardware/lineage/compat",
+      "base_commit": "9e8811a297036c370f7643813a3c733f6e442d86",
+      "baseline_tree": "abda36e6a16b4494c9dace9818b1ac5ce141f76c",
+      "patches": []
+    },
+    {
+      "path": "hardware/lineage/interfaces",
+      "base_commit": "fa9b3971f30173ddc69ee51be2e33ff12e862459",
+      "baseline_tree": "6984a06fe0446316824145e8454668011c1a3302",
+      "patches": []
+    },
+    {
+      "path": "hardware/qcom-caf/bt",
+      "base_commit": "a17e7e2a5a15b6422cc8fe3972f3c1def832069b",
+      "baseline_tree": "2ff10bd6eef554338ea61fe7480e9fea9f89c0a0",
+      "patches": []
+    },
+    {
+      "path": "hardware/qcom-caf/common",
+      "base_commit": "8a1bedc654a1c5327b8906e29ef81515c9f62c5e",
+      "baseline_tree": "b25df62e6f6528873efbece198458471557da64c",
+      "patches": []
+    },
+    {
+      "path": "hardware/qcom-caf/wlan",
+      "base_commit": "80f4e5682a036bcf14e3407cbdb3a504f2e05483",
+      "baseline_tree": "4545baf4bfc092e38b51d629a978b725bf295dec",
+      "patches": []
+    },
+    {
+      "path": "hardware/ril",
+      "base_commit": "e41e6f27289b9a58392e7100f7a98cfedfc4522f",
+      "baseline_tree": "aba4e49f3484c649bee1f7f34884d34b1f854872",
+      "patches": []
+    },
+    {
+      "path": "packages/apps/DocumentsUI",
+      "base_commit": "860ac584e6b4c8b99a9ba9777d4784e076bc9e5b",
+      "baseline_tree": "fa305f3a502f93fa6462376183b5394a1d3322ad",
+      "patches": []
+    },
+    {
+      "path": "packages/apps/Launcher3",
+      "base_commit": "e3f4473fa3713d636a7062af9ffddfba07eff20f",
+      "baseline_tree": "b0093148b37263342a94d258de85c60c288bb645",
+      "patches": []
+    },
+    {
+      "path": "packages/modules/Bluetooth",
+      "base_commit": "9c8527b58a326f00f336d2185c7370a7b5b55592",
+      "baseline_tree": "a38b239cee6818b2603bf591a4b12b00e9c6224b",
+      "patches": []
+    },
+    {
+      "path": "packages/modules/Connectivity",
+      "base_commit": "038e53f5f49e6eac5e464e3b1dea90601bc4253f",
+      "baseline_tree": "b74918c9d0b4ce8a4663fb092b0dfe63d5430925",
+      "patches": []
+    },
+    {
+      "path": "packages/modules/NetworkStack",
+      "base_commit": "dedce43670a0ed20debd03b4b25963f2dd31c291",
+      "baseline_tree": "96e7f8677e97c67e2ac3b7aae1e4687fdd7dd31c",
+      "patches": []
+    },
+    {
+      "path": "packages/modules/Wifi",
+      "base_commit": "3d64ce98a9f90d38026402da90e7dc140b5f7f21",
+      "baseline_tree": "c7e1bb1d452569c3037b657aec0c68cf624c360e",
+      "patches": []
+    },
+    {
+      "path": "packages/modules/adb",
+      "base_commit": "c03b5287cfd7ca5a56bfe165f06c4abd8afb6c86",
+      "baseline_tree": "3016cd60b3b03a72e49b72f91449d6f358900a90",
+      "patches": []
+    },
+    {
+      "path": "packages/services/Telephony",
+      "base_commit": "c906bf5a859031db616ce95b048e0bdfaa324a54",
+      "baseline_tree": "cdb9ead4f5c0b9f325a5a12368b2f6b32d2cda6c",
+      "patches": []
+    },
+    {
+      "path": "prebuilts/clang/host/linux-x86",
+      "base_commit": "9916fb51ccb914d62d35ad9a7b9b21d2ef046928",
+      "baseline_tree": "90b8c145f525ec3772198e8275d6ed90ceeca2f7",
+      "patches": []
+    },
+    {
+      "path": "system/bpf",
+      "base_commit": "6c5f4f865220e27cda2a9f4210023a7a10f5bafc",
+      "baseline_tree": "bf5dc77ffcc98a5a1aad9a02c51bb00f05c4f5fa",
+      "patches": []
+    },
+    {
+      "path": "system/core",
+      "base_commit": "d53fabe32ac548bec83b5c489a8fcfe24fa076fe",
+      "baseline_tree": "201008273cb0f7edba2dbb97ff3f9db459fbefc5",
+      "patches": []
+    },
+    {
+      "path": "system/libhidl",
+      "base_commit": "d0dd9f22e5127e02b4c4990abe9a2961a1f3792b",
+      "baseline_tree": "70a5cd1eafd5749ef2399e6307d69d52a2931649",
+      "patches": []
+    },
+    {
+      "path": "system/libhwbinder",
+      "base_commit": "fa09c9bdeb5c55770dd251aba6e70d3df8c3ade4",
+      "baseline_tree": "71340d9eb510e54c8572525ce4c9eeb11c3b819b",
+      "patches": []
+    },
+    {
+      "path": "system/logging",
+      "base_commit": "e63321648d4f2cb7c437bd615366e8f8765ad2bc",
+      "baseline_tree": "e86330f8efe96020ef9ee69b350711ce29d6c7af",
+      "patches": []
+    },
+    {
+      "path": "system/memory/lmkd",
+      "base_commit": "5352c3c8c9e26cadaf31a80b1223019b2898a385",
+      "baseline_tree": "2a6f90183f5500bb14a60c2f51f5ab4b6436f75e",
+      "patches": []
+    },
+    {
+      "path": "system/netd",
+      "base_commit": "796eaca5ab9dfdd87751c51bb71fa3f26c87d034",
+      "baseline_tree": "95537d6c3fdd2a109f71e3f41082cd84c76a2554",
+      "patches": []
+    },
+    {
+      "path": "system/security",
+      "base_commit": "db68176544e65cc29f0c2a1cd695df6d629bcc72",
+      "baseline_tree": "454e955e6517820fa2b7664cd1b928643599760f",
+      "patches": []
+    },
+    {
+      "path": "system/sepolicy",
+      "base_commit": "0731a7cecfc250339a2dc2ec7634bc46ecd585dc",
+      "baseline_tree": "be22d32bff2826e5d4f9fe9a9b0214295b8b2e51",
+      "patches": []
+    },
+    {
+      "path": "vendor/lineage",
+      "base_commit": "cae5987b811bf635fb081bffd0e9ee38115639f5",
+      "baseline_tree": "52153e052b262bbba871a33b3fb67d95eb48996e",
+      "patches": []
+    },
+    {
+      "path": "vendor/qcom/opensource/power",
+      "base_commit": "200473174b7653cf2675e82b195f56a0ed7dfb66",
+      "baseline_tree": "f2a3a391f95fdcd323e1f1a75b3e2b3fee6452bc",
+      "patches": []
+    }
+  ],
+  "upstream_backports": [
+    {
+      "step": "upstream_appsearch_maintenance",
+      "path": "frameworks/base",
+      "before": "393ad77fec458ab4fa659ae0987576b917fc64db",
+      "after": "e12ac8f76228aacea4d6638e51dba9015f14109e",
+      "tree": "0e2dabad88fdbac80578512453ab60c4eb73da45"
+    },
+    {
+      "step": "upstream_stats_service_unbound",
+      "path": "frameworks/base",
+      "before": "e12ac8f76228aacea4d6638e51dba9015f14109e",
+      "after": "629ce6df37c354d22b25a596e33dd38d24b8306c",
+      "tree": "a1542a30fb099fc3254ea650261b2ffd5f839731"
+    },
+    {
+      "step": "upstream_stats_unsupported",
+      "path": "frameworks/base",
+      "before": "629ce6df37c354d22b25a596e33dd38d24b8306c",
+      "after": "16c4d203b7040477bd70ed5617b3f7f3bda48549",
+      "tree": "61f308048e9070053a785ffc50ab2967f29bdbd3"
+    }
+  ],
+  "already_in_android16": [
+    "7afbc249e2b0462e1cb5908c041e01d28b7e801d"
+  ]
+}

@@ -1,4 +1,4 @@
-From bc31d42890ff8b7d55eee7b8002e5d0c61e601ad Mon Sep 17 00:00:00 2001
+From 1f0fa509367809906e4143b8da8915d75d98def0 Mon Sep 17 00:00:00 2001
 From: GuaiYiHu <guaiyihu@foxmail.com>
 Date: Fri, 16 Oct 2026 21:16:54 +0800
 Subject: [PATCH] bcmdhd: Normalize successful legacy BTCOEXMODE replies

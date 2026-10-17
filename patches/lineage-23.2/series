@@ -1,0 +1,8 @@
+bionic/0001-linker-Admit-scoped-MiOne-non-PIE-daemons-in-the-standard-ARM-li.patch
+frameworks-base/0001-BluetoothPowerStatsCollector-Retain-service-unbound-regression-o.patch
+frameworks-base/0002-TelephonyRegistry-Check-mapped-phone-id-before-updating-NTN-sign.patch
+hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-with-a-compatible-HAL-table.patch
+hardware-broadcom-wlan/0002-bcmdhd-Normalize-successful-legacy-BTCOEXMODE-replies.patch
+packages-modules-Bluetooth/0001-Bluetooth-Retain-classic-only-controllers-with-Android-16-manage.patch
+packages-modules-Connectivity/0001-NetBpfLoad-Admit-opted-in-Aries-and-MiOne-Linux-3.4-BPF-backport.patch
+system-sepolicy/0001-sepolicy-allow-non-Treble-audioserver-to-publish-the-HIDL-audio-.patch
