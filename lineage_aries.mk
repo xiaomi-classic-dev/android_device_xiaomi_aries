@@ -22,8 +22,11 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 # Inherit from cancro device
 $(call inherit-product, device/xiaomi/aries/aries.mk)
 
-# Inherit some common Lineage stuff.
-$(call inherit-product, vendor/lineage/config/common_mini_phone.mk)
+# Use the explicitly installed AOSP Camera2 instead of Aperture.
+PRODUCT_NO_CAMERA := true
+
+# Include the full Lineage app and font configuration.
+$(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 
 PRODUCT_NAME := lineage_aries
 PRODUCT_CHARACTERISTICS := nosdcard
