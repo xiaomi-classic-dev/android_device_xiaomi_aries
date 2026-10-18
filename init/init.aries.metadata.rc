@@ -1,0 +1,7 @@
+# Aries has a separate persistent cache partition, but no metadata partition.
+# init.target.rc mounts cache in the earlier fs action. Bind it before post-fs
+# remounts rootfs read-only and aconfigd initializes its platform flag storage.
+on fs
+    mkdir /cache/metadata 0771 root system
+    mount none /cache/metadata /metadata bind
+    restorecon_recursive /metadata

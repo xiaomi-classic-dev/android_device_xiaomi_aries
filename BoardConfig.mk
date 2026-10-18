@@ -53,3 +53,6 @@ $(call soong_config_set,netbpfload,legacy_kernel,true)
 
 # The real 3.4 cpuset parser predates cpuset_v2_mode.
 $(call soong_config_set,libprocessgroup,legacy_cpuset_mount,true)
+
+# Cache backs metadata on this device, which has no metadata partition.
+BOARD_ROOT_EXTRA_FOLDERS += metadata

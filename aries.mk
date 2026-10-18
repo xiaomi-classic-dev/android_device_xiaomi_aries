@@ -45,3 +45,7 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     android.hardware.power-service.aries \
     android.hardware.thermal@2.0-service.aries
+
+# Provide Android 16 metadata storage after cache is mounted and before post-fs.
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/init/init.aries.metadata.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/init.aries.metadata.rc
