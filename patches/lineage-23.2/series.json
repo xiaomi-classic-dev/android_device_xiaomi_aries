@@ -58,16 +58,8 @@
       "path": "external/boringssl",
       "base_commit": "1e3b727981831886a0910cd9e82d5bbee4cc7029",
       "baseline_tree": "a9040469ad2e62b644ac12c204d432f603945eb7",
-      "patches": [
-        {
-          "file": "external-boringssl/0001-selftest-Install-BoringSSL-init-import-aliases-as-regular-files.patch",
-          "source_commit": "47934f58da87e9fb215eeffba729fed558b24fdd",
-          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
-          "patch_id": "2a81543d56a400456ec841019de594bb565c4312",
-          "sha256": "b0094e863ae79aa482d9b42915da15ecc34a5de6154548ee8b872a6fe553253a"
-        }
-      ],
-      "source_head": "47934f58da87e9fb215eeffba729fed558b24fdd"
+      "patches": [],
+      "source_head": "1e3b727981831886a0910cd9e82d5bbee4cc7029"
     },
     {
       "path": "external/jemalloc_new",
@@ -329,16 +321,9 @@
           "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
           "patch_id": "7347761f47602cb659bcdc3f5bd7134f7e5792cd",
           "sha256": "463c7356b9cc9f8a4602fbf91f3de5bd9f4da24e3bded07b8cb605d5a04e65d9"
-        },
-        {
-          "file": "system-core/0002-init-Install-BoringSSL-import-aliases-as-regular-configuration-f.patch",
-          "source_commit": "087d49da4ed86c9e050da6252767d184340c29b8",
-          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
-          "patch_id": "0b31adaacb384baa71f0232fea523026f3970617",
-          "sha256": "19265f20e322123263ca820e8c9ce6534a2401a47deac19d6b79a6c2ed02b5f7"
         }
       ],
-      "source_head": "087d49da4ed86c9e050da6252767d184340c29b8"
+      "source_head": "719ddc8544d49aed6294366cf5b928e95fd62007"
     },
     {
       "path": "system/libhidl",
@@ -427,5 +412,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 15
+  "mione_platform_increment_count": 13
 }
