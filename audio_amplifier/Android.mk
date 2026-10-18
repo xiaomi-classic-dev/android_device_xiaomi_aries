@@ -16,8 +16,10 @@ LOCAL_C_INCLUDES += \
 	$(call project-path-for,qcom-audio)/hal \
 	$(call project-path-for,qcom-audio)/hal/$(TARGET_BOARD_PLATFORM)/ \
 	$(call project-path-for,qcom-audio)/hal/audio_extn \
-	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
 	hardware/libhardware/include
+
+# Use Bionic's scrubbed UAPI first, then the private ES310 driver header.
+LOCAL_CFLAGS += -idirafter $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
