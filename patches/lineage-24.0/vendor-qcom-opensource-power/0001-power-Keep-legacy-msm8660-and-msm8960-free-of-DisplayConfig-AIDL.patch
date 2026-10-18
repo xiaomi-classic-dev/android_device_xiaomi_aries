@@ -1,0 +1,29 @@
+From 57435450f816932c78169f08fe55e5645626872d Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:31:13 +0800
+Subject: [PATCH] power: Keep legacy msm8660 and msm8960 free of DisplayConfig
+ AIDL
+
+Both preserved display trees export display_intf_headers without a DisplayConfig AIDL interface. Select the existing no-DisplayConfig PowerHintSession path for these namespaces, as for msm8974 and msm8994. Modern display dependencies and all power implementations remain unchanged. Resolves the actual Aries Android17 Soong undefined-module failure; no device power service selection is changed.
+
+Change-Id: I46fc808143cb5e91a7f7f7adc336ec123b21a018
+---
+ Android.bp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index 4aded9f..6c384fd 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -86,6 +86,8 @@ cc_binary {
+         any @ flag_val: ["//" + flag_val + ":libdisplayconfig.qti"],
+         default: [],
+     }) + select(soong_config_variable("qtidisplay", "headers_namespace"), {
++        "hardware/qcom-caf/msm8660/display": [],
++        "hardware/qcom-caf/msm8960/display": [],
+         "hardware/qcom-caf/msm8974/display": [],
+         "hardware/qcom-caf/msm8994/display": [],
+         any @ flag_val: ["//" + flag_val + ":vendor.qti.hardware.display.config-V12-ndk"],
+-- 
+2.53.0
+

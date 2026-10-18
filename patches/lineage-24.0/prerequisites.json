@@ -61,6 +61,11 @@
       "path": "system/sepolicy",
       "base_commit": "202e10aaa9988aac57af0f1b4bd49785fbe90d9a",
       "baseline_tree": "7d40c05627ca2513f9f709abb79b6696f10c2087"
+    },
+    {
+      "path": "vendor/qcom/opensource/power",
+      "base_commit": "1fdb3fad4b706e1139c48e192c62219b75f124b6",
+      "baseline_tree": "cdfeae59d49c269169fd300896b79e29a48d937f"
     }
   ]
 }

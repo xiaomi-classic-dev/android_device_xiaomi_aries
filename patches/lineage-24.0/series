@@ -12,3 +12,4 @@ system-core/0001-libprocessgroup-Negotiate-opted-in-legacy-cpuset-mounts-on-Andr
 system-linkerconfig/0001-linkerconfig-Retain-scoped-Aries-HIDL-and-RIL-namespace-links.patch
 system-linkerconfig/0002-linkerconfig-Retain-scoped-MiOne-CND-and-ICU-links-on-Android-17.patch
 system-sepolicy/0001-sepolicy-Keep-non-Treble-passthrough-audio-publication-scoped-on-Android-17.patch
+vendor-qcom-opensource-power/0001-power-Keep-legacy-msm8660-and-msm8960-free-of-DisplayConfig-AIDL.patch

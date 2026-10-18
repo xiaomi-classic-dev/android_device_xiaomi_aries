@@ -211,7 +211,23 @@
           "sha256": "9e07abf2b0faacb8b2f183db576c63462fb97f61bdcbcbc62d3e725a6126a2ce"
         }
       ]
+    },
+    {
+      "path": "vendor/qcom/opensource/power",
+      "base_commit": "1fdb3fad4b706e1139c48e192c62219b75f124b6",
+      "baseline_tree": "cdfeae59d49c269169fd300896b79e29a48d937f",
+      "source_head": "57435450f816932c78169f08fe55e5645626872d",
+      "patched_tree": "8a370b016a1b5f3917456c63ad1920eb93945c23",
+      "patches": [
+        {
+          "file": "vendor-qcom-opensource-power/0001-power-Keep-legacy-msm8660-and-msm8960-free-of-DisplayConfig-AIDL.patch",
+          "source_commit": "57435450f816932c78169f08fe55e5645626872d",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "f10adfee9999c9013996c9adfa2d205067668023",
+          "sha256": "2d0584f5977140b23a47fd2d5b83a0724191fb075354ef20bea431365d17db60"
+        }
+      ]
     }
   ],
-  "local_increment_count": 14
+  "local_increment_count": 15
 }
