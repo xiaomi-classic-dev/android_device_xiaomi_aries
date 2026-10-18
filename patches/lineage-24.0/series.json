@@ -1,0 +1,217 @@
+{
+  "android_version": 17,
+  "sdk": 37,
+  "lineage_branch": "lineage-24.0",
+  "port_docs_snapshot": "port_docs/docs/manifests/lineage-24.0-source-snapshot.json",
+  "port_docs_snapshot_sha256": "12ba8533efeae6383059cf4535b682c6f898f4028f498836529a36ecc1913b3c",
+  "prerequisite": "Fixed port_docs Lineage24 platform pins, including already published Android17 changes. This series exports only reviewed local Aries/MiOne increments; guarded product compatibility does not replace the actual kernel version.",
+  "projects": [
+    {
+      "path": "bionic",
+      "base_commit": "9ce1b748b1b12707a28e29bb07dbd04e87f8bf47",
+      "baseline_tree": "8876747a8841386f6b3f620f0f689f3f26457755",
+      "source_head": "e51de17afd3d5b81e2d201345cea501babc8f97b",
+      "patched_tree": "699830d9ee2ac9cf87c3d53137192887837f217e",
+      "patches": [
+        {
+          "file": "bionic/0001-linker-Retain-the-scoped-MiOne-vendor-non-PIE-contract-on-Android-17.patch",
+          "source_commit": "e51de17afd3d5b81e2d201345cea501babc8f97b",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "8b237944a21086635ee725dbb3a66a47b465c29e",
+          "sha256": "495d738ef5296d3b9be21b1e4ad77f1a0d384d3a3e73153fc7c154371598deb3"
+        }
+      ]
+    },
+    {
+      "path": "build/make",
+      "base_commit": "33cac9cb95142a06f0a419cdc7a1b781e9fc3210",
+      "baseline_tree": "68f57c900127eec7e1f816f04fcee2b28a5e0ad8",
+      "source_head": "dafebe0fa308791056f98e7b55f6cb81494f3259",
+      "patched_tree": "51d3a2139065dcff92f29596ce2e5abd32ee4e8f",
+      "patches": [
+        {
+          "file": "build-make/0001-build-Generate-canonical-ramdisk-metadata-before-recovery-resources-on-Android-17.patch",
+          "source_commit": "dafebe0fa308791056f98e7b55f6cb81494f3259",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "d7646721cd49d0e905b97e8d8511352dac007656",
+          "sha256": "6721ae3c1976703e54ae6482aca740f453a8ba7ed8322e20405d73b234c9f7a5"
+        }
+      ]
+    },
+    {
+      "path": "frameworks/base",
+      "base_commit": "8004c6ebb8b8b3849310e8be6ec0e21cca44e4c4",
+      "baseline_tree": "8470c90f883e8df8a3e387163032fc20cf6ea5ca",
+      "source_head": "82e11da2b9d0bd64bfbb110d8f73566f7b6d7a2f",
+      "patched_tree": "5db34ae85cdf6c9d0344c4cbd212bdfc5dc77e2a",
+      "patches": [
+        {
+          "file": "frameworks-base/0001-TelephonyRegistry-Validate-the-mapped-phone-before-writing-NTN-strength.patch",
+          "source_commit": "82e11da2b9d0bd64bfbb110d8f73566f7b6d7a2f",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "451d67b0caaf989d0f1d98bb24b889d5e96ea603",
+          "sha256": "3f9efa3184d0e0e83d1a87306acb0831a4cc4170cbb1b057502d203ddaa77517"
+        }
+      ]
+    },
+    {
+      "path": "hardware/broadcom/wlan",
+      "base_commit": "0e0536bfdf7098633e31eec2c66786629fa9daa4",
+      "baseline_tree": "9e60f756f4d971424ebd6aba48c651bdea7498d8",
+      "source_head": "946ae4fb093339faf62a7b94a481c16b20e02537",
+      "patched_tree": "dd18efd6fdfb4bb13a8deee851fd3f6041991d9e",
+      "patches": [
+        {
+          "file": "hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-when-the-current-HAL-table-has-the-slots.patch",
+          "source_commit": "20bf4592b14c0fd12077df798889c1892cd3d61d",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "bb0142808baa9743db524d4e2ce3834ae03bf5cb",
+          "sha256": "c4a2d88821a27f17adac4c39759d8196aee50240def3f0160d972bfeaa7378f0"
+        },
+        {
+          "file": "hardware-broadcom-wlan/0002-bcmdhd-Retain-exact-legacy-BTCOEXMODE-setter-success-semantics.patch",
+          "source_commit": "946ae4fb093339faf62a7b94a481c16b20e02537",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "1cf4d1a92bbb6595d75b9c53a10fe260b2ddc5a8",
+          "sha256": "c07c007a6065859a81d964f6cf8391198b156880842afc2d926ae4b6eb985559"
+        }
+      ]
+    },
+    {
+      "path": "hardware/interfaces",
+      "base_commit": "6d5a0fb2592fc2b01a9333f1e70b3da036aca6da",
+      "baseline_tree": "4e7b74aa2078f2e51b9b20eeb3d31f52a559f702",
+      "source_head": "96759e97fb1f6ab195838f44ebf2b1771fb09795",
+      "patched_tree": "bcbaf2d15ecbccb7a4e490cb3d1299ec2994efee",
+      "patches": [
+        {
+          "file": "hardware-interfaces/0001-vintf-Retain-the-complete-FCM-6-contract-for-legacy-products.patch",
+          "source_commit": "96759e97fb1f6ab195838f44ebf2b1771fb09795",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "def612f3870cdd0cd6963b634658e48d936ce461",
+          "sha256": "dc8a72e33d405269fc49a7abfab93f9ab4cf87885e3933d7ecbeca7a27de1e5a"
+        }
+      ]
+    },
+    {
+      "path": "hardware/qcom-caf/wlan",
+      "base_commit": "4593f9b377e25a7cd55b2319e7f85bf5ae35104b",
+      "baseline_tree": "f2b4610a63e2550fd401c870da1f7c93c1257057",
+      "source_head": "5d03a11716d6c52e3ee296b75ba6afef1ae2127c",
+      "patched_tree": "321a3779ee1cac7297b724c9c15acbd3516e9d18",
+      "patches": [
+        {
+          "file": "hardware-qcom-caf-wlan/0001-wifi-Select-the-qcwcn-config-only-on-qcwcn-boards.patch",
+          "source_commit": "5d03a11716d6c52e3ee296b75ba6afef1ae2127c",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "ed149cbe4cc5fa7ec5828f514b3d2cb089806a53",
+          "sha256": "d4254d8e7a5e238e0390dfb3079e75c9b35db2a2861cb90873ba56c7debaab0b"
+        }
+      ]
+    },
+    {
+      "path": "kernel/configs",
+      "base_commit": "b7d2174c0ba36268f0283aab0c4bfcb5a1b747dc",
+      "baseline_tree": "f78ae2cd63342f1b5663264a8554dbf571e09a87",
+      "source_head": "832b33e3e1741780f840b05beeadc3f58dd1a8b4",
+      "patched_tree": "4ed28f81d1f7da230f6565f8a1d9bac37567fc2a",
+      "patches": [
+        {
+          "file": "kernel-configs/0001-Retain-Android-S-4.14-requirements-for-explicitly-selected-FCM-6.patch",
+          "source_commit": "832b33e3e1741780f840b05beeadc3f58dd1a8b4",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "78d80bb2a391ff8e22741567e07d8bbaaee57bd7",
+          "sha256": "9448abc8899264bc02ccec4742d197650ab8a01254f69d85bcc6067506d625e9"
+        }
+      ]
+    },
+    {
+      "path": "packages/modules/Bluetooth",
+      "base_commit": "7979e4981137f118a3019a560d7ef2654eb5d3a2",
+      "baseline_tree": "beb5bf8056d5f07aca13bb46fc5bd26958776f4d",
+      "source_head": "7bd5397a87bbd98d8cf76be9325203fc46c54748",
+      "patched_tree": "1e5960945290c2b5b3443ad07704cc56c47129c0",
+      "patches": [
+        {
+          "file": "packages-modules-Bluetooth/0001-Bluetooth-Retain-classic-only-controllers-with-current-Android-17-managers.patch",
+          "source_commit": "7bd5397a87bbd98d8cf76be9325203fc46c54748",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "e085027b488964307266049aa655de6196b85e74",
+          "sha256": "53e1ff1964e26f4825eb7150269523679948dd628d72780f3ff30d2ad23b3e36"
+        }
+      ]
+    },
+    {
+      "path": "packages/modules/Connectivity",
+      "base_commit": "ba2210835adfaacb46153031be05cf152e04ebd3",
+      "baseline_tree": "c5384ac32f7021d62f018eddc589c03814e09cc5",
+      "source_head": "a895dc572296f1ced17e533335d4bc4d16d5d80d",
+      "patched_tree": "aa8255ca16f3b4b68dd2468245a6892f9cae24b6",
+      "patches": [
+        {
+          "file": "packages-modules-Connectivity/0001-bpf-Select-truthful-Android-17-network-capabilities-on-opted-in-3.4-products.patch",
+          "source_commit": "a895dc572296f1ced17e533335d4bc4d16d5d80d",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "cc756796f9ed2ee8ce67b5a2ad8d41ecc56059ed",
+          "sha256": "e7821003262aa3474e9a3f923a67a164329c1b9b65cd6a902bcd50578493a451"
+        }
+      ]
+    },
+    {
+      "path": "system/core",
+      "base_commit": "b77eabc0b48f2b4eae70c3651743db459f63f14c",
+      "baseline_tree": "ed9a51cca90d2b1a0e6b1e1aca180acc26b30e4c",
+      "source_head": "7bca8f624ec5eada802f87e7bbc9d957987021ef",
+      "patched_tree": "78c51ffcb3cdefbd52dc019b72b3b9ef3faddd15",
+      "patches": [
+        {
+          "file": "system-core/0001-libprocessgroup-Negotiate-opted-in-legacy-cpuset-mounts-on-Android-17.patch",
+          "source_commit": "7bca8f624ec5eada802f87e7bbc9d957987021ef",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "efeb1d2d45b6b4ab5a6ae2d873d43f8972710689",
+          "sha256": "9370a22c950e0d46fab1cf5884d79c9c3866f887171129c6cd6175dcbdaf6924"
+        }
+      ]
+    },
+    {
+      "path": "system/linkerconfig",
+      "base_commit": "f6b4bd983b909a907cf7e9fae8a6365d827638b6",
+      "baseline_tree": "e12ca633a9a679e6391ec1c7cfcb9a49767a4095",
+      "source_head": "dc3afe41683f624121eeafe9a48bb8b5735d4366",
+      "patched_tree": "13b1ccf4f575ce9a6077a346444bc26f3facc063",
+      "patches": [
+        {
+          "file": "system-linkerconfig/0001-linkerconfig-Retain-scoped-Aries-HIDL-and-RIL-namespace-links.patch",
+          "source_commit": "95e893c99e0ddeb845bae2db13f0563f0d5bb442",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "aeb297fbc59e0225a6f96d4e89c54bcb82456e66",
+          "sha256": "c0ef70d566a7271249c6e7d9b054b8aff65d57e845c06944f2e459ad34d7477f"
+        },
+        {
+          "file": "system-linkerconfig/0002-linkerconfig-Retain-scoped-MiOne-CND-and-ICU-links-on-Android-17.patch",
+          "source_commit": "dc3afe41683f624121eeafe9a48bb8b5735d4366",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "7b26713c01a93f11d5763786c95799de0727f147",
+          "sha256": "8d4902de30b5a49bab21b230ab93548ec7fec3d99df9eed0387d86702bb190b7"
+        }
+      ]
+    },
+    {
+      "path": "system/sepolicy",
+      "base_commit": "202e10aaa9988aac57af0f1b4bd49785fbe90d9a",
+      "baseline_tree": "7d40c05627ca2513f9f709abb79b6696f10c2087",
+      "source_head": "176d244b48972865d75d6e985fd352f6731fef4b",
+      "patched_tree": "8482570577434e496ba8d3ed847af5c9eb9a7794",
+      "patches": [
+        {
+          "file": "system-sepolicy/0001-sepolicy-Keep-non-Treble-passthrough-audio-publication-scoped-on-Android-17.patch",
+          "source_commit": "176d244b48972865d75d6e985fd352f6731fef4b",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "ed85f3d754381ce99225d253d4ac75b3bf082da3",
+          "sha256": "9e07abf2b0faacb8b2f183db576c63462fb97f61bdcbcbc62d3e725a6126a2ce"
+        }
+      ]
+    }
+  ],
+  "local_increment_count": 14
+}

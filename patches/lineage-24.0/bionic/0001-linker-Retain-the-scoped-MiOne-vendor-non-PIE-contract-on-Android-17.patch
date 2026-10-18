@@ -1,0 +1,101 @@
+From e51de17afd3d5b81e2d201345cea501babc8f97b Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:11:41 +0800
+Subject: [PATCH] linker: Retain the scoped MiOne vendor non-PIE contract on
+ Android 17
+
+Individually reviewed against the fixed Android17 call sites and interfaces. Preserve exact legacy-product/runtime contracts without replacing the standard linker or original vendor, broadening non-PIE execution, enabling duplicate WLAN config providers, or changing generic query/error replies. Reference Android16 local fix bionic/0001-linker-Admit-scoped-MiOne-non-PIE-daemons-in-the-standard-ARM-li.patch. Actual Android17 compilation/runtime remain separate validation gates.
+
+Change-Id: I6a0db36e0c8b5b69bf0d9578bf14ef491c87f320
+---
+ linker/Android.bp      | 18 ++++++++++++++++++
+ linker/linker_main.cpp | 30 +++++++++++++++++++++++++++++-
+ 2 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/linker/Android.bp b/linker/Android.bp
+index 31a824d8a..d30dda6fb 100644
+--- a/linker/Android.bp
++++ b/linker/Android.bp
+@@ -156,6 +156,23 @@ cc_defaults {
+ // linker components
+ // ========================================================
+ 
++soong_config_module_type {
++    name: "linker_legacy_vendor_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "bionic",
++    bool_variables: ["mione_legacy_non_pie"],
++    properties: ["cflags"],
++}
++
++linker_legacy_vendor_cc_defaults {
++    name: "linker_legacy_vendor_defaults",
++    soong_config_variables: {
++        mione_legacy_non_pie: {
++            cflags: ["-DMIONE_LEGACY_NON_PIE"],
++        },
++    },
++}
++
+ // Enable a module on all targets the linker runs on (ordinary Android targets, Linux Bionic, and
+ // native bridge implementations).
+ cc_defaults {
+@@ -171,6 +188,7 @@ cc_library_static {
+     defaults: [
+         "linker_defaults",
+         "linker_all_targets",
++        "linker_legacy_vendor_defaults",
+     ],
+     srcs: ["linker_main.cpp"],
+ 
+diff --git a/linker/linker_main.cpp b/linker/linker_main.cpp
+index ce1337c51..8980175ad 100644
+--- a/linker/linker_main.cpp
++++ b/linker/linker_main.cpp
+@@ -294,6 +294,29 @@ static void platform_properties_init() {
+ #endif
+ }
+ 
++#if defined(__arm__) && defined(MIONE_LEGACY_NON_PIE)
++// The standard ARM linker also serves MiOne's fixed-address vendor daemons.
++// Admit only kernel-loaded executables at the original exact vendor paths.
++static bool mione_legacy_executable(const char* path) {
++  static constexpr const char* names[] = {
++    "/vendor/bin/cnd", "/system/vendor/bin/cnd",
++    "/vendor/bin/netmgrd", "/system/vendor/bin/netmgrd",
++    "/vendor/bin/qmuxd", "/system/vendor/bin/qmuxd",
++    "/vendor/bin/rmt_storage", "/system/vendor/bin/rmt_storage",
++    "/vendor/bin/bridgemgrd", "/system/vendor/bin/bridgemgrd",
++    "/vendor/bin/gpsone_daemon", "/system/vendor/bin/gpsone_daemon",
++    "/vendor/bin/port-bridge", "/system/vendor/bin/port-bridge",
++    "/vendor/bin/qmiproxy", "/system/vendor/bin/qmiproxy",
++    "/vendor/bin/usbhub", "/system/vendor/bin/usbhub",
++    "/vendor/bin/usbhub_init", "/system/vendor/bin/usbhub_init",
++  };
++  for (const char* allowed : names) {
++    if (strcmp(path, allowed) == 0) return true;
++  }
++  return false;
++}
++#endif
++
+ static ElfW(Addr) linker_main(KernelArgumentBlock& args, const char* exe_to_load) {
+   ProtectedDataGuard guard;
+ 
+@@ -422,7 +445,12 @@ static ElfW(Addr) linker_main(KernelArgumentBlock& args, const char* exe_to_load
+ 
+   // For security reasons we dropped non-PIE support in API level 21,
+   // and the NDK no longer supports earlier API levels.
+-  if (elf_hdr->e_type != ET_DYN) {
++  bool allow_legacy_executable = false;
++#if defined(__arm__) && defined(MIONE_LEGACY_NON_PIE)
++  allow_legacy_executable = exe_to_load == nullptr && elf_hdr->e_type == ET_EXEC &&
++                            mione_legacy_executable(exe_info.path.c_str());
++#endif
++  if (elf_hdr->e_type != ET_DYN && !allow_legacy_executable) {
+     __linker_error("error: %s: Android only supports position-independent "
+                    "executables (-fPIE)", exe_info.path.c_str());
+   }
+-- 
+2.53.0
+

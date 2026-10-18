@@ -1,0 +1,46 @@
+From dc3afe41683f624121eeafe9a48bb8b5735d4366 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:11:42 +0800
+Subject: [PATCH] linkerconfig: Retain scoped MiOne CND and ICU links on
+ Android 17
+
+Preserve the final reviewed Android16 CND bridge/SQLite and direct existing i18n APEX links, with MiOne property+device identity and vendor/default-section scoping. Current namespace builder APIs and dependency-resolution ordering remain the same. No old linker or whole system namespace exposure is introduced. Actual Android17 generated-linkerconfig validation remains required.
+
+Change-Id: Ic89c2c3acbe7f001e85febcffba782ce10037c94
+---
+ contents/common/system_links.cc | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/contents/common/system_links.cc b/contents/common/system_links.cc
+index 32e4f09..646405a 100644
+--- a/contents/common/system_links.cc
++++ b/contents/common/system_links.cc
+@@ -45,6 +45,9 @@ void AddStandardSystemLinks(const Context& ctx, Section* section) {
+   const bool debuggable = android::base::GetBoolProperty("ro.debuggable", false);
+   const bool legacy_aries = android::base::GetBoolProperty(
+       "ro.vendor.aries.legacy_linker", false);
++  const bool legacy_mione = android::base::GetBoolProperty(
++      "ro.vendor.mione.legacy_linker", false) &&
++      android::base::GetProperty("ro.product.device", "") == "mione_plus";
+   const std::string system_ns_name = ctx.GetSystemNamespaceName();
+   const bool is_section_vndk_enabled = ctx.IsSectionVndkEnabled();
+   section->ForEachNamespaces([&](Namespace& ns) {
+@@ -60,6 +63,15 @@ void AddStandardSystemLinks(const Context& ctx, Section* section) {
+         ns.GetLink(system_ns_name).AddSharedLib("libaudioclient.so");
+       }
+     }
++    if (legacy_mione && ctx.IsDefaultConfig() && ctx.IsVendorSection() &&
++        ns.GetName() == "default") {
++      // The original CND binaries preload this system-owned ABI bridge.
++      ns.GetLink(system_ns_name).AddSharedLib(
++          std::vector<std::string>{"libmione_cnd_shim.so", "libsqlite.so"});
++      // Section requirements are resolved before this hook; use the actual APEX namespace.
++      ns.GetLink("com_android_i18n").AddSharedLib(
++          std::vector<std::string>{"libicui18n.so", "libicuuc.so"});
++    }
+     if (ns.GetName() != system_ns_name) {
+       ns.GetLink(system_ns_name).AddSharedLib(kBionicLibs);
+       if (!is_section_vndk_enabled || ns.GetName() != "default") {
+-- 
+2.53.0
+

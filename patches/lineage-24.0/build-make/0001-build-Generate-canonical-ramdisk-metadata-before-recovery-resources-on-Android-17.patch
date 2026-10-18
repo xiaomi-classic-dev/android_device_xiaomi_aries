@@ -1,0 +1,30 @@
+From dafebe0fa308791056f98e7b55f6cb81494f3259 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 02:47:50 +0800
+Subject: [PATCH] build: Generate canonical ramdisk metadata before recovery
+ resources on Android 17
+
+Port the individually reviewed Android16 fix to the fixed Android17 platform baseline. Current call sites and APIs were inspected; actual Android17 build and package/runtime validation remain separate gates. Reference: build-make/0001-build-Generate-canonical-ramdisk-metadata-before-recovery-resour.patch
+
+Change-Id: I750a66651cd984c50a3c6533595b7780c7dfe02a
+---
+ core/Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/core/Makefile b/core/Makefile
+index 65c45cb835..194979390d 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -7012,6 +7012,9 @@ ifneq ($(PRODUCT_SYSTEM_DLKM_BASE_FS_PATH),)
+ endif
+ ifeq ($(TARGET_OTA_ALLOW_NON_AB),true)
+ ifneq ($(INSTALLED_RECOVERYIMAGE_TARGET),)
++	@# Recovery resources and later IMAGES must use identical canonical ramdisk metadata.
++	$(hide) $(call fs_config,$(zip_root)/BOOT/RAMDISK,) > $(zip_root)/META/boot_filesystem_config.txt
++	$(hide) $(call fs_config,$(zip_root)/RECOVERY/RAMDISK,) > $(zip_root)/META/recovery_filesystem_config.txt
+ 	$(hide) PATH=$(INTERNAL_USERIMAGES_BINARY_PATHS):$$PATH MKBOOTIMG=$(MKBOOTIMG) \
+ 	    $(MAKE_RECOVERY_PATCH) $(zip_root) $(zip_root)
+ endif
+-- 
+2.53.0
+

@@ -1,0 +1,14 @@
+bionic/0001-linker-Retain-the-scoped-MiOne-vendor-non-PIE-contract-on-Android-17.patch
+build-make/0001-build-Generate-canonical-ramdisk-metadata-before-recovery-resources-on-Android-17.patch
+frameworks-base/0001-TelephonyRegistry-Validate-the-mapped-phone-before-writing-NTN-strength.patch
+hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-when-the-current-HAL-table-has-the-slots.patch
+hardware-broadcom-wlan/0002-bcmdhd-Retain-exact-legacy-BTCOEXMODE-setter-success-semantics.patch
+hardware-interfaces/0001-vintf-Retain-the-complete-FCM-6-contract-for-legacy-products.patch
+hardware-qcom-caf-wlan/0001-wifi-Select-the-qcwcn-config-only-on-qcwcn-boards.patch
+kernel-configs/0001-Retain-Android-S-4.14-requirements-for-explicitly-selected-FCM-6.patch
+packages-modules-Bluetooth/0001-Bluetooth-Retain-classic-only-controllers-with-current-Android-17-managers.patch
+packages-modules-Connectivity/0001-bpf-Select-truthful-Android-17-network-capabilities-on-opted-in-3.4-products.patch
+system-core/0001-libprocessgroup-Negotiate-opted-in-legacy-cpuset-mounts-on-Android-17.patch
+system-linkerconfig/0001-linkerconfig-Retain-scoped-Aries-HIDL-and-RIL-namespace-links.patch
+system-linkerconfig/0002-linkerconfig-Retain-scoped-MiOne-CND-and-ICU-links-on-Android-17.patch
+system-sepolicy/0001-sepolicy-Keep-non-Treble-passthrough-audio-publication-scoped-on-Android-17.patch

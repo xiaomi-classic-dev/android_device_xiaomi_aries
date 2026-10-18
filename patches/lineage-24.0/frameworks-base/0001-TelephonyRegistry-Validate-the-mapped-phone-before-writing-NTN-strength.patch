@@ -1,0 +1,32 @@
+From 82e11da2b9d0bd64bfbb110d8f73566f7b6d7a2f Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 02:48:43 +0800
+Subject: [PATCH] TelephonyRegistry: Validate the mapped phone before writing
+ NTN strength
+
+Port the individually reviewed Android16 fix to the fixed Android17 platform baseline. Current call sites and APIs were inspected; actual Android17 build and package/runtime validation remain separate gates. Reference: frameworks-base/0002-TelephonyRegistry-Check-mapped-phone-id-before-updating-NTN-sign.patch
+
+Change-Id: If4d677357b28446916df321001a5ad45d6443114
+---
+ services/core/java/com/android/server/TelephonyRegistry.java | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/services/core/java/com/android/server/TelephonyRegistry.java b/services/core/java/com/android/server/TelephonyRegistry.java
+index ee20dde90922..38d0d21ff48a 100644
+--- a/services/core/java/com/android/server/TelephonyRegistry.java
++++ b/services/core/java/com/android/server/TelephonyRegistry.java
+@@ -3973,6 +3973,11 @@ public class TelephonyRegistry extends ITelephonyRegistry.Stub {
+ 
+         synchronized (mRecords) {
+             int phoneId = getPhoneIdFromSubId(subId);
++            if (!validatePhoneId(phoneId)
++                    || phoneId >= mCarrierRoamingNtnSignalStrength.length) {
++                log("notifyCarrierRoamingNtnSignalStrengthChanged: invalid phone id=" + phoneId);
++                return;
++            }
+             mCarrierRoamingNtnSignalStrength[phoneId] = ntnSignalStrength;
+             for (Record r : mRecords) {
+                 if (r.matchTelephonyCallbackEvent(
+-- 
+2.53.0
+

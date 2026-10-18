@@ -1,0 +1,44 @@
+From 95e893c99e0ddeb845bae2db13f0563f0d5bb442 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 02:48:44 +0800
+Subject: [PATCH] linkerconfig: Retain scoped Aries HIDL and RIL namespace
+ links
+
+Port the individually reviewed Android16 fix to the fixed Android17 platform baseline. Current call sites and APIs were inspected; actual Android17 build and package/runtime validation remain separate gates. Reference: system-linkerconfig/0001-linkerconfig-Scope-legacy-Aries-HIDL-and-RIL-links-to-their-exis.patch
+
+Change-Id: I012b1f72e436dbce02a0aaeb3c671e267b4ff06c
+---
+ contents/common/system_links.cc | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/contents/common/system_links.cc b/contents/common/system_links.cc
+index 47bcea8..32e4f09 100644
+--- a/contents/common/system_links.cc
++++ b/contents/common/system_links.cc
+@@ -43,9 +43,23 @@ using android::linkerconfig::modules::Section;
+ 
+ void AddStandardSystemLinks(const Context& ctx, Section* section) {
+   const bool debuggable = android::base::GetBoolProperty("ro.debuggable", false);
++  const bool legacy_aries = android::base::GetBoolProperty(
++      "ro.vendor.aries.legacy_linker", false);
+   const std::string system_ns_name = ctx.GetSystemNamespaceName();
+   const bool is_section_vndk_enabled = ctx.IsSectionVndkEnabled();
+   section->ForEachNamespaces([&](Namespace& ns) {
++    if (legacy_aries && ctx.IsDefaultConfig()) {
++      // A passthrough HAL must register its Bn constructors in the same HIDL
++      // registry that the framework Java HwBinder bridge consults.
++      if (ctx.IsSystemSection() && ns.GetName() == "sphal") {
++        ns.GetLink(system_ns_name).AddSharedLib("libhidlbase.so");
++      }
++      // The extracted Qualcomm RIL imports the platform AudioSystem ABI.
++      // Keep the remaining vendor namespace isolated and its own libraries.
++      if (ctx.IsVendorSection() && ns.GetName() == "default") {
++        ns.GetLink(system_ns_name).AddSharedLib("libaudioclient.so");
++      }
++    }
+     if (ns.GetName() != system_ns_name) {
+       ns.GetLink(system_ns_name).AddSharedLib(kBionicLibs);
+       if (!is_section_vndk_enabled || ns.GetName() != "default") {
+-- 
+2.53.0
+

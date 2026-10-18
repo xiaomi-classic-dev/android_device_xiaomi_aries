@@ -1,0 +1,30 @@
+From 5d03a11716d6c52e3ee296b75ba6afef1ae2127c Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:11:42 +0800
+Subject: [PATCH] wifi: Select the qcwcn config only on qcwcn boards
+
+Individually reviewed against the fixed Android17 call sites and interfaces. Preserve exact legacy-product/runtime contracts without replacing the standard linker or original vendor, broadening non-PIE execution, enabling duplicate WLAN config providers, or changing generic query/error replies. Reference Android16 local fix hardware-qcom-caf-wlan/0001-wifi-Select-the-qcwcn-supplicant-config-only-for-qcwcn-boards.patch. Actual Android17 compilation/runtime remain separate validation gates.
+
+Change-Id: I787fb1a4cf0ab988d72f3746cd31728fb6ff0b8c
+---
+ qcwcn/config/Android.bp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/qcwcn/config/Android.bp b/qcwcn/config/Android.bp
+index a0f4eb5..81a4b27 100644
+--- a/qcwcn/config/Android.bp
++++ b/qcwcn/config/Android.bp
+@@ -17,6 +17,10 @@ prebuilt_etc {
+     src: ":wpa_supplicant_conf_gen",
+     sub_dir: "wifi",
+     vendor: true,
++    enabled: select(soong_config_variable("wpa_supplicant_8", "board_wlan_device"), {
++        "qcwcn": true,
++        default: false,
++    }),
+     licenses: [
+         "external_wpa_supplicant_8_license",
+     ],
+-- 
+2.53.0
+

@@ -1,0 +1,54 @@
+From 20bf4592b14c0fd12077df798889c1892cd3d61d Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:11:42 +0800
+Subject: [PATCH] bcmdhd: Register RTT v4 only when the current HAL table has
+ the slots
+
+Individually reviewed against the fixed Android17 call sites and interfaces. Preserve exact legacy-product/runtime contracts without replacing the standard linker or original vendor, broadening non-PIE execution, enabling duplicate WLAN config providers, or changing generic query/error replies. Reference Android16 local fix hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-with-a-compatible-HAL-table.patch. Actual Android17 compilation/runtime remain separate validation gates.
+
+Change-Id: I43c666a41a138460212d6831d67211f18eea51f5
+---
+ bcmdhd/wifi_hal/wifi_hal.cpp | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/bcmdhd/wifi_hal/wifi_hal.cpp b/bcmdhd/wifi_hal/wifi_hal.cpp
+index 28b0a22..e8ec7eb 100644
+--- a/bcmdhd/wifi_hal/wifi_hal.cpp
++++ b/bcmdhd/wifi_hal/wifi_hal.cpp
+@@ -256,6 +256,22 @@ static const char *IfaceTypeToString(wifi_interface_type iface_type)
+     }
+ }
+ 
++// Register modern RTT slots only when the selected vendor HAL table has them.
++template <typename HalFn>
++static auto initRttV4Funcs(HalFn *fn, int)
++        -> decltype(fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4,
++                    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4,
++                    void())
++{
++    fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4;
++    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4;
++}
++
++template <typename HalFn>
++static void initRttV4Funcs(HalFn *, long)
++{
++}
++
+ /*initialize function pointer table with Broadcom HHAL API*/
+ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn)
+ {
+@@ -283,9 +299,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn)
+     fn->wifi_set_link_stats = wifi_set_link_stats;
+     fn->wifi_clear_link_stats = wifi_clear_link_stats;
+     fn->wifi_get_valid_channels = wifi_get_valid_channels;
+-    fn->wifi_rtt_range_request_v4 = wifi_rtt_range_request_v4;
++    initRttV4Funcs(fn, 0);
+     fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
+-    fn->wifi_get_rtt_capabilities_v4 = wifi_get_rtt_capabilities_v4;
+     fn->wifi_rtt_get_responder_info = wifi_rtt_get_responder_info;
+     fn->wifi_enable_responder = wifi_enable_responder;
+     fn->wifi_disable_responder = wifi_disable_responder;
+-- 
+2.53.0
+

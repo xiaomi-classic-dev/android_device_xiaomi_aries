@@ -1,0 +1,37 @@
+From 176d244b48972865d75d6e985fd352f6731fef4b Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 02:48:44 +0800
+Subject: [PATCH] sepolicy: Keep non-Treble passthrough audio publication
+ scoped on Android 17
+
+Retain the reviewed 484fb2eb4d8fb3e358a46a2b5077a4872e65d9bb arrangement without adding audioserver to the general HAL-server attribute. Current AIDL audio and full-Treble rules are unchanged. Policy compilation is still required.
+
+Change-Id: I12bd07c78f6412cbb47a153e75a17caf7c6c1caa
+---
+ private/hal_audio.te | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/private/hal_audio.te b/private/hal_audio.te
+index 97bab603e..ac7cec0c1 100644
+--- a/private/hal_audio.te
++++ b/private/hal_audio.te
+@@ -2,7 +2,15 @@
+ binder_call(hal_audio_client, hal_audio_server)
+ binder_call(hal_audio_server, hal_audio_client)
+ 
+-hal_attribute_hwservice(hal_audio, hal_audio_hwservice)
++full_treble_only(`hal_attribute_hwservice(hal_audio, hal_audio_hwservice)')
++not_full_treble(`
++  # Passthrough audio and its Bluetooth session share audioserver.
++  allow hal_audio_client hal_audio_hwservice:hwservice_manager find;
++  allow { hal_audio_server audioserver } hal_audio_hwservice:hwservice_manager { add find };
++  allow { hal_audio_server audioserver } hidl_base_hwservice:hwservice_manager add;
++  neverallow { domain -hal_audio_server -audioserver } hal_audio_hwservice:hwservice_manager add;
++  binder_call(hal_audio_client, audioserver)
++')
+ hal_attribute_service(hal_audio, hal_audio_service)
+ 
+ binder_call(hal_audio_server, servicemanager)
+-- 
+2.53.0
+

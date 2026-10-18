@@ -1,0 +1,81 @@
+From 7bca8f624ec5eada802f87e7bbc9d957987021ef Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 02:48:45 +0800
+Subject: [PATCH] libprocessgroup: Negotiate opted-in legacy cpuset mounts on
+ Android 17
+
+Port reviewed 719ddc8544d49aed6294366cf5b928e95fd62007 to the current C++23 libprocessgroup_defaults module. Retry only cpuset ENOENT/EINVAL using required noprefix semantics; retain actual mount errors and required cgroup creation gates. No fallback for non-opted-in products.
+
+Change-Id: Ia1dcd8bf9ad8fe235eaef084b2183bdf51092e7b
+---
+ libprocessgroup/Android.bp                 | 17 +++++++++++++++++
+ libprocessgroup/setup/Android.bp           |  2 +-
+ libprocessgroup/setup/cgroup_map_write.cpp | 16 ++++++++++++++--
+ 3 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/libprocessgroup/Android.bp b/libprocessgroup/Android.bp
+index a7ba4f5ba..21a7775e0 100644
+--- a/libprocessgroup/Android.bp
++++ b/libprocessgroup/Android.bp
+@@ -156,3 +156,20 @@ cc_library {
+     ],
+ 
+ }
++
++soong_config_module_type {
++    name: "libprocessgroup_legacy_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "libprocessgroup",
++    bool_variables: ["legacy_cpuset_mount"],
++    properties: ["cflags"],
++}
++
++libprocessgroup_legacy_cc_defaults {
++    name: "libprocessgroup_legacy_mount_defaults",
++    soong_config_variables: {
++        legacy_cpuset_mount: {
++            cflags: ["-DLEGACY_CPUSET_MOUNT=1"],
++        },
++    },
++}
+diff --git a/libprocessgroup/setup/Android.bp b/libprocessgroup/setup/Android.bp
+index 02f183945..2ecb8ce70 100644
+--- a/libprocessgroup/setup/Android.bp
++++ b/libprocessgroup/setup/Android.bp
+@@ -40,5 +40,5 @@ cc_library_shared {
+     export_header_lib_headers: [
+         "libprocessgroup_headers",
+     ],
+-    defaults: ["libprocessgroup_defaults"],
++    defaults: ["libprocessgroup_defaults", "libprocessgroup_legacy_mount_defaults"],
+ }
+diff --git a/libprocessgroup/setup/cgroup_map_write.cpp b/libprocessgroup/setup/cgroup_map_write.cpp
+index 0b26e9568..a01d34e54 100644
+--- a/libprocessgroup/setup/cgroup_map_write.cpp
++++ b/libprocessgroup/setup/cgroup_map_write.cpp
+@@ -199,8 +199,20 @@ static bool MountV1CgroupController(const CgroupDescriptor& descriptor) {
+         options += ",noprefix,cpuset_v2_mode";
+     }
+ 
+-    if (mount("none", controller->path(), "cgroup", MS_NODEV | MS_NOEXEC | MS_NOSUID,
+-              options.c_str())) {
++    int mount_result = mount("none", controller->path(), "cgroup",
++                             MS_NODEV | MS_NOEXEC | MS_NOSUID, options.c_str());
++#if defined(LEGACY_CPUSET_MOUNT)
++    // Opted-in legacy products lack cpuset_v2_mode. Unknown options return
++    // ENOENT on their kernels; newer parsers may return EINVAL. Keep the
++    // required controller/noprefix mount and propagate a real mount failure.
++    if (mount_result != 0 && !strcmp(controller->name(), "cpuset") &&
++        (errno == ENOENT || errno == EINVAL)) {
++        PLOG(WARNING) << "cpuset_v2_mode unavailable; retrying legacy cpuset semantics";
++        mount_result = mount("none", controller->path(), "cgroup",
++                             MS_NODEV | MS_NOEXEC | MS_NOSUID, "cpuset,noprefix");
++    }
++#endif
++    if (mount_result != 0) {
+         if (IsOptionalController(controller)) {
+             PLOG(INFO) << "Failed to mount optional controller " << controller->name();
+             return true;
+-- 
+2.53.0
+

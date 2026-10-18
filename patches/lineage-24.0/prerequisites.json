@@ -1,0 +1,66 @@
+{
+  "port_docs_snapshot": "port_docs/docs/manifests/lineage-24.0-source-snapshot.json",
+  "port_docs_snapshot_sha256": "12ba8533efeae6383059cf4535b682c6f898f4028f498836529a36ecc1913b3c",
+  "fixed_platform_pins": [
+    {
+      "path": "bionic",
+      "base_commit": "9ce1b748b1b12707a28e29bb07dbd04e87f8bf47",
+      "baseline_tree": "8876747a8841386f6b3f620f0f689f3f26457755"
+    },
+    {
+      "path": "build/make",
+      "base_commit": "33cac9cb95142a06f0a419cdc7a1b781e9fc3210",
+      "baseline_tree": "68f57c900127eec7e1f816f04fcee2b28a5e0ad8"
+    },
+    {
+      "path": "frameworks/base",
+      "base_commit": "8004c6ebb8b8b3849310e8be6ec0e21cca44e4c4",
+      "baseline_tree": "8470c90f883e8df8a3e387163032fc20cf6ea5ca"
+    },
+    {
+      "path": "hardware/broadcom/wlan",
+      "base_commit": "0e0536bfdf7098633e31eec2c66786629fa9daa4",
+      "baseline_tree": "9e60f756f4d971424ebd6aba48c651bdea7498d8"
+    },
+    {
+      "path": "hardware/interfaces",
+      "base_commit": "6d5a0fb2592fc2b01a9333f1e70b3da036aca6da",
+      "baseline_tree": "4e7b74aa2078f2e51b9b20eeb3d31f52a559f702"
+    },
+    {
+      "path": "hardware/qcom-caf/wlan",
+      "base_commit": "4593f9b377e25a7cd55b2319e7f85bf5ae35104b",
+      "baseline_tree": "f2b4610a63e2550fd401c870da1f7c93c1257057"
+    },
+    {
+      "path": "kernel/configs",
+      "base_commit": "b7d2174c0ba36268f0283aab0c4bfcb5a1b747dc",
+      "baseline_tree": "f78ae2cd63342f1b5663264a8554dbf571e09a87"
+    },
+    {
+      "path": "packages/modules/Bluetooth",
+      "base_commit": "7979e4981137f118a3019a560d7ef2654eb5d3a2",
+      "baseline_tree": "beb5bf8056d5f07aca13bb46fc5bd26958776f4d"
+    },
+    {
+      "path": "packages/modules/Connectivity",
+      "base_commit": "ba2210835adfaacb46153031be05cf152e04ebd3",
+      "baseline_tree": "c5384ac32f7021d62f018eddc589c03814e09cc5"
+    },
+    {
+      "path": "system/core",
+      "base_commit": "b77eabc0b48f2b4eae70c3651743db459f63f14c",
+      "baseline_tree": "ed9a51cca90d2b1a0e6b1e1aca180acc26b30e4c"
+    },
+    {
+      "path": "system/linkerconfig",
+      "base_commit": "f6b4bd983b909a907cf7e9fae8a6365d827638b6",
+      "baseline_tree": "e12ca633a9a679e6391ec1c7cfcb9a49767a4095"
+    },
+    {
+      "path": "system/sepolicy",
+      "base_commit": "202e10aaa9988aac57af0f1b4bd49785fbe90d9a",
+      "baseline_tree": "7d40c05627ca2513f9f709abb79b6696f10c2087"
+    }
+  ]
+}

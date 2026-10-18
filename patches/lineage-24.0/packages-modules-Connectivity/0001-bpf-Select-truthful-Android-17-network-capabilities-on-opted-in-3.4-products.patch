@@ -1,0 +1,843 @@
+From a895dc572296f1ced17e533335d4bc4d16d5d80d Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Mon, 19 Oct 2026 03:03:10 +0800
+Subject: [PATCH] bpf: Select truthful Android 17 network capabilities on
+ opted-in 3.4 products
+
+Adapt the current Android17 loader and program metadata for the actual Aries/MiOne ARM32 network backport. Require product/build opt-in, the real 3.4 kernel and no kver_override. Retain all actual required map/program/BTF, attach/query, completion and verifier failures. Probe actual versions rather than compiler-assumed minimums for these builds.
+
+Include the implemented mmapable arrays, LRU, socket storage, ring buffers, boot time, socket lookup/release and cgroup socket release. Select current Android17 accounting, local-network protection, loopback checks, tracing and socket-option logic with explicit truthful 3.4 metadata. Keep unsupported 6.1-only TCPAccECN and 5.15 bind-return features outside the profile.
+
+Validation: 15 BPF objects compile with current Soong BPF flags; default code and runtime metadata match the fixed Android17 baseline byte-for-byte. All 19 required netd programs select uniquely with complete map references and actual helper IDs. ARM32 KernelUtils compiles with/without the profile. Host ASan/UBSan replay of the actual Aries verifier core with modeled context/helper callbacks accepts the 22 selected ELF programs. These are compile and host-harness results, not actual Android17 device verifier/JIT/network validation. Full Android17 loader/netd compilation remains a separate gate.
+Change-Id: Id870ffe5a8de444363853b2f54d8c825cb8d6b29
+---
+ bpf/headers/include/bpf/KernelUtils.h | 24 ++++++-
+ bpf/loader/Android.bp                 | 19 ++++-
+ bpf/loader/NetBpfLoad.cpp             | 40 ++++++-----
+ bpf/netd/Android.bp                   |  4 +-
+ bpf/netd/BpfHandler.cpp               | 30 ++++----
+ bpf/progs/Android.bp                  | 25 +++++++
+ bpf/progs/clatd.c                     | 12 ++++
+ bpf/progs/include/bpf_helpers.h       | 23 +++++--
+ bpf/progs/netd.c                      | 99 ++++++++++++++++++++++-----
+ 9 files changed, 219 insertions(+), 57 deletions(-)
+
+diff --git a/bpf/headers/include/bpf/KernelUtils.h b/bpf/headers/include/bpf/KernelUtils.h
+index 1ee34f056f..24d44564ab 100644
+--- a/bpf/headers/include/bpf/KernelUtils.h
++++ b/bpf/headers/include/bpf/KernelUtils.h
+@@ -53,7 +53,9 @@ static inline unsigned __unused kernelVersion() {
+ #endif
+ 
+ static constexpr unsigned minSupportedKernelVer =
+-#ifdef __ANDROID_APEX__  // Mainline code (incl. NetBpfLoad) in APEX shouldn't (yet) assume anything
++#if defined(NETBPFLOAD_LEGACY_BACKPORT) // Probe real capabilities on these product builds.
++        KVER(0, 0, 0);
++#elif defined(__ANDROID_APEX__)  // Mainline code must not assume a minimum kernel.
+         KVER(0, 0, 0);
+ #elif __ANDROID_API__ >= 10000 // tip of dev tree - we'll need to bump this manually as time advances
+         KVER(5, 10, 0);
+@@ -199,6 +201,26 @@ static constexpr bool isArm() {
+ #endif
+ }
+ 
++// The opted-in Aries/MiOne ARM32 kernels carry the audited network, BTF,
++// mmapable-array, LRU, socket-storage and ring-buffer backports. This selects
++// capabilities, never a newer kernel version. Keep all actual syscall checks.
++static inline bool hasLegacyBpfBackport() {
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++    char device[PROP_VALUE_MAX] = {};
++    char allow[PROP_VALUE_MAX] = {};
++    char overrideVersion[PROP_VALUE_MAX] = {};
++    __system_property_get("ro.product.device", device);
++    __system_property_get("ro.bpf.allow_32bit", allow);
++    if (__system_property_get("ro.bpf.kver_override", overrideVersion)) return false;
++    return isArm() && isUserspace32bit() && isKernel32Bit() &&
++           kernelVer >= KVER(3, 4, 0) && kernelVer < KVER(3, 5, 0) &&
++           !strcmp(allow, "true") &&
++           (!strcmp(device, "aries") || !strcmp(device, "mione_plus"));
++#else
++    return false;
++#endif
++}
++
+ static constexpr bool isX86() {
+ #if defined(__i386__)
+     static_assert(isUserspace32bit(), "huh? i386 must be 32 bit");
+diff --git a/bpf/loader/Android.bp b/bpf/loader/Android.bp
+index bee2681b4c..d8b6faff57 100644
+--- a/bpf/loader/Android.bp
++++ b/bpf/loader/Android.bp
+@@ -44,10 +44,27 @@ install_symlink {
+     },
+ }
+ 
++soong_config_module_type {
++    name: "netbpfload_legacy_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "netbpfload",
++    bool_variables: ["legacy_kernel"],
++    properties: ["cflags"],
++}
++
++netbpfload_legacy_cc_defaults {
++    name: "netbpfload_legacy_defaults",
++    soong_config_variables: {
++        legacy_kernel: {
++            cflags: ["-DNETBPFLOAD_LEGACY_BACKPORT=1"],
++        },
++    },
++}
++
+ cc_binary {
+     name: "netbpfload",
+ 
+-    defaults: ["bpf_cc_defaults"],
++    defaults: ["bpf_cc_defaults", "netbpfload_legacy_defaults"],
+     cflags: [
+         "-Wformat",
+         "-Wformat-signedness",
+diff --git a/bpf/loader/NetBpfLoad.cpp b/bpf/loader/NetBpfLoad.cpp
+index c2b6d29ffa..26d32065ad 100644
+--- a/bpf/loader/NetBpfLoad.cpp
++++ b/bpf/loader/NetBpfLoad.cpp
+@@ -391,7 +391,8 @@ int readCodeSections(const ElfObject& elfObj, vector<codeSection>& cs) {
+ }
+ 
+ static unsigned int sanitizeMapFlags(unsigned int map_flags) {
+-    if (!isAtLeastKernelVersion(5, 10)) map_flags &= ~BPF_F_MMAPABLE;
++    if (!isAtLeastKernelVersion(5, 10) && !android::bpf::hasLegacyBpfBackport())
++        map_flags &= ~BPF_F_MMAPABLE;
+     return map_flags;
+ }
+ 
+@@ -403,7 +404,7 @@ static bool mapMatchesExpectations(const unique_fd& fd,
+     // This is because the primary failure mode we're trying to detect here
+     // is either a source code misconfiguration (which is likely kernel independent)
+     // or a newly introduced kernel feature/bug (which is unlikely to get backported to 4.9).
+-    if (!isAtLeastKernelVersion(4, 14)) return true;
++    if (!isAtLeastKernelVersion(4, 14) && !android::bpf::hasLegacyBpfBackport()) return true;
+ 
+     // Assuming fd is a valid Bpf Map file descriptor then
+     // all the following should always succeed on a 4.14+ kernel.
+@@ -579,7 +580,7 @@ static int loadBtf(const ElfObject &elfObj, struct btf *btf) {
+         if (ret) return ret;
+     }
+ 
+-    if (!isAtLeastKernelVersion(5, 10)) {
++    if (!isAtLeastKernelVersion(5, 10) && !android::bpf::hasLegacyBpfBackport()) {
+         // Likely unnecessary on kernel 5.4 but untested.
+         sanitizeBtf(btf);
+     }
+@@ -729,7 +730,7 @@ static int pinMap(const borrowed_fd& fd, const struct bpf_map_def& mapDef) {
+             }
+         }
+ 
+-        if (isAtLeastKernelVersion(4, 14)) {
++        if (isAtLeastKernelVersion(4, 14) || android::bpf::hasLegacyBpfBackport()) {
+             int mapId = bpfGetFdMapId(fd);
+             if (mapId == -1) {
+                 const int err = errno;
+@@ -742,7 +743,8 @@ static int pinMap(const borrowed_fd& fd, const struct bpf_map_def& mapDef) {
+ }
+ 
+ static bool isMapTypeSupported(enum bpf_map_type type) {
+-    if (type == BPF_MAP_TYPE_LPM_TRIE && !isAtLeastKernelVersion(4, 14)) {
++    if (type == BPF_MAP_TYPE_LPM_TRIE && !isAtLeastKernelVersion(4, 14) &&
++        !android::bpf::hasLegacyBpfBackport()) {
+         // On Linux Kernels older than 4.14 this map type doesn't exist - autoskip.
+         return false;
+     }
+@@ -780,7 +782,7 @@ static int createMaps(const ElfObject& elfObj, const span<const struct bpf_map_d
+     span<const char> btfData;
+     struct btf *btf = NULL;
+     auto btfGuard = base::make_scope_guard([&btf] { if (btf) btf__free(btf); });
+-    if (isAtLeastKernelVersion(4, 19)) {
++    if (isAtLeastKernelVersion(4, 19) || android::bpf::hasLegacyBpfBackport()) {
+         // On Linux Kernels older than 4.18 BPF_BTF_LOAD command doesn't exist.
+         ret = elfObj.readSectionByName(".BTF", btfData);
+         if (ret) {
+@@ -984,7 +986,7 @@ static int pinProg(const borrowed_fd& fd, const struct bpf_prog_def& progDef) {
+ }
+ 
+ static int validateProg(const borrowed_fd& fd, const char* const progPinLoc) {
+-    if (!isAtLeastKernelVersion(4, 14)) {
++    if (!isAtLeastKernelVersion(4, 14) && !android::bpf::hasLegacyBpfBackport()) {
+         return 0;
+     }
+     int progId = bpfGetFdProgId(fd);
+@@ -1020,7 +1022,7 @@ static int validateProg(const borrowed_fd& fd, const char* const progPinLoc) {
+ }
+ 
+ static enum bpf_attach_type fixup_attach(enum bpf_prog_type prog_type, enum bpf_attach_type expected_attach_type) {
+-    if (!isAtLeastKernelVersion(4, 19))
++    if (!isAtLeastKernelVersion(4, 19) && !android::bpf::hasLegacyBpfBackport())
+         if (prog_type == BPF_PROG_TYPE_CGROUP_SKB)
+             if (expected_attach_type == BPF_CGROUP_INET_EGRESS)
+                 return BPF_CGROUP_INET_INGRESS; // aka BPF_PROG_ATTACH_TYPE_DEFAULT
+@@ -1285,7 +1287,8 @@ static int loadProgByLibbpf(const char* const elfPath) {
+     ret = bpf_object__load(obj);
+     if (ret) return ret;
+     // On Linux Kernels older than 4.18 BPF_BTF_LOAD command doesn't exist.
+-    if (isAtLeastKernelVersion(4, 19) && bpf_object__btf_fd(obj) < 0) return -1;
++    if ((isAtLeastKernelVersion(4, 19) || android::bpf::hasLegacyBpfBackport()) &&
++        bpf_object__btf_fd(obj) < 0) return -1;
+ 
+     ret = pinMaps(obj, md);
+     if (ret) return ret;
+@@ -1556,42 +1559,47 @@ static int doLoad(char** argv, char * const envp[]) {
+         return 2;
+     }
+ 
++    const bool legacyBpfBackport = android::bpf::hasLegacyBpfBackport();
++    if (legacyBpfBackport) {
++        ALOGW("Loading audited ARM32 network backports on real kernel %07x.", kernelVersion());
++    }
++
+     // both S and T require kernel 4.9 (and eBpf support)
+     // (this also guarantees 'kernelVer' isn't an invalid uninitialized 0)
+-    if (!isAtLeastKernelVersion(4, 9)) {
++    if (!isAtLeastKernelVersion(4, 9) && !legacyBpfBackport) {
+         ALOGE("Android S & T require kernel 4.9.");
+         return 3;
+     }
+ 
+     // U bumps the kernel requirement up to 4.14
+-    if (isAtLeastU && !isAtLeastKernelVersion(4, 14)) {
++    if (isAtLeastU && !isAtLeastKernelVersion(4, 14) && !legacyBpfBackport) {
+         ALOGE("Android U requires kernel 4.14.");
+         return 4;
+     }
+ 
+     // V bumps the kernel requirement up to 4.19
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel419
+-    if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
++    if (isAtLeastV && !isAtLeastKernelVersion(4, 19) && !legacyBpfBackport) {
+         ALOGE("Android V requires kernel 4.19.");
+         return 5;
+     }
+ 
+     // 25Q2 bumps the kernel requirement up to 5.4
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel54
+-    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
++    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4) && !legacyBpfBackport) {
+         ALOGE("Android 25Q2 requires kernel 5.4.");
+         return 6;
+     }
+ 
+     // 25Q4 bumps the kernel requirement up to 5.10
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel510
+-    if (isAtLeast25Q4 && !isAtLeastKernelVersion(5, 10)) {
++    if (isAtLeast25Q4 && !isAtLeastKernelVersion(5, 10) && !legacyBpfBackport) {
+         ALOGE("Android 25Q4 requires kernel 5.10.");
+         return 7;
+     }
+ 
+     // 26Q4 bumps the kernel requirement up to 5.15
+-    if (isAtLeast26Q4 && !isAtLeastKernelVersion(5, 15)) {
++    if (isAtLeast26Q4 && !isAtLeastKernelVersion(5, 15) && !legacyBpfBackport) {
+         ALOGE("Android 26Q4 requires kernel 5.15.");
+         return 7;
+     }
+@@ -1806,7 +1814,7 @@ static int doLoad(char** argv, char * const envp[]) {
+             ALOGE("bpfGetNextMapId(zero) returned %u (errno %d)", mapId, errno);
+             return 33;
+         }
+-    } else if (isAtLeastKernelVersion(4, 14)) {  // implies S through U QPR2
++    } else if (isAtLeastKernelVersion(4, 14) || android::bpf::hasLegacyBpfBackport()) {  // implies S through U QPR2
+         // bpfGetNext{Prog,Map}Id require 4.14+
+         // furthermore since we're not running as root, we're not the initial
+         // platform bpfloader, so there may already be some maps & programs.
+diff --git a/bpf/netd/Android.bp b/bpf/netd/Android.bp
+index 7122d67812..f0395446b8 100644
+--- a/bpf/netd/Android.bp
++++ b/bpf/netd/Android.bp
+@@ -27,7 +27,7 @@ cc_library {
+         ],
+         symbol_file: "libnetd_updatable.map.txt",
+     },
+-    defaults: ["netd_defaults"],
++    defaults: ["netd_defaults", "netbpfload_legacy_defaults"],
+     header_libs: [
+         "bpf_connectivity_headers",
+         "bpf_prog_mainline_headers",
+@@ -58,7 +58,7 @@ cc_library {
+ 
+ cc_test {
+     name: "netd_updatable_unit_test",
+-    defaults: ["netd_defaults"],
++    defaults: ["netd_defaults", "netbpfload_legacy_defaults"],
+     test_suites: [
+         "general-tests",
+         "mts-tethering",
+diff --git a/bpf/netd/BpfHandler.cpp b/bpf/netd/BpfHandler.cpp
+index 9b57548b54..368bb99df5 100644
+--- a/bpf/netd/BpfHandler.cpp
++++ b/bpf/netd/BpfHandler.cpp
+@@ -89,7 +89,7 @@ static void getsockoptTest() {
+     if (isKernel64Bit() != isUserspace64bit() && !isAtLeastKernelVersion(6, 13)) return;
+ 
+     // SO_ANDROID_DROP_REASON option is only supported on 5.10+.
+-    if (!isAtLeastKernelVersion(5, 10)) return;
++    if (!isAtLeastKernelVersion(5, 10) && !bpf::hasLegacyBpfBackport()) return;
+ 
+     base::unique_fd sock(socket(AF_INET6, SOCK_DGRAM | SOCK_CLOEXEC, 0));
+     if (!sock.ok()) abort();
+@@ -109,18 +109,19 @@ static void getsockoptTest() {
+ }
+ 
+ static Result<void> initPrograms(const char* cg2_path) {
++    const bool legacyBpfBackport = bpf::hasLegacyBpfBackport();
+     if (!cg2_path) return Error() << "cg2_path is NULL";
+ 
+     // This code was mainlined in T, so this should be trivially satisfied.
+     if (!isAtLeastT) return Error() << "S- platform is unsupported";
+ 
+     // S requires eBPF support which was only added in 4.9, so this should be satisfied.
+-    if (!isAtLeastKernelVersion(4, 9)) {
++    if (!isAtLeastKernelVersion(4, 9) && !legacyBpfBackport) {
+         return Error() << "kernel version < 4.9.0 is unsupported";
+     }
+ 
+     // U bumps the kernel requirement up to 4.14
+-    if (isAtLeastU && !isAtLeastKernelVersion(4, 14)) {
++    if (isAtLeastU && !isAtLeastKernelVersion(4, 14) && !legacyBpfBackport) {
+         return Error() << "U+ platform with kernel version < 4.14.0 is unsupported";
+     }
+ 
+@@ -130,12 +131,12 @@ static Result<void> initPrograms(const char* cg2_path) {
+     }
+ 
+     // V bumps the kernel requirement up to 4.19
+-    if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
++    if (isAtLeastV && !isAtLeastKernelVersion(4, 19) && !legacyBpfBackport) {
+         return Error() << "V+ platform with kernel version < 4.19.0 is unsupported";
+     }
+ 
+     // 25Q2 bumps the kernel requirement up to 5.4
+-    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
++    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4) && !legacyBpfBackport) {
+         return Error() << "25Q2+ platform with kernel version < 5.4.0 is unsupported";
+     }
+ 
+@@ -154,12 +155,12 @@ static Result<void> initPrograms(const char* cg2_path) {
+     // cgroup if the program is pinned properly.
+     // TODO: delete the if statement once all devices should support cgroup
+     // socket filter (ie. the minimum kernel version required is 4.14).
+-    if (isAtLeastKernelVersion(4, 14)) {
++    if (isAtLeastKernelVersion(4, 14) || legacyBpfBackport) {
+         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_INET_CREATE_PROG_PATH,
+                                     cg_fd, BPF_CGROUP_INET_SOCK_CREATE));
+     }
+ 
+-    if (isAtLeastKernelVersion(5, 10)) {
++    if (isAtLeastKernelVersion(5, 10) || legacyBpfBackport) {
+         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_INET_RELEASE_PROG_PATH,
+                                     cg_fd, BPF_CGROUP_INET_SOCK_RELEASE));
+     }
+@@ -167,7 +168,7 @@ static Result<void> initPrograms(const char* cg2_path) {
+     if (isAtLeastV) {
+         // V requires 4.19+, so technically this 2nd 'if' is not required, but it
+         // doesn't hurt us to try to support AOSP forks that try to support older kernels.
+-        if (isAtLeastKernelVersion(4, 19)) {
++        if (isAtLeastKernelVersion(4, 19) || legacyBpfBackport) {
+             RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT4_PROG_PATH,
+                                         cg_fd, BPF_CGROUP_INET4_CONNECT));
+             RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_CONNECT6_PROG_PATH,
+@@ -182,7 +183,7 @@ static Result<void> initPrograms(const char* cg2_path) {
+                                         cg_fd, BPF_CGROUP_UDP6_SENDMSG));
+         }
+ 
+-        if (isAtLeastKernelVersion(5, 4)) {
++        if (isAtLeastKernelVersion(5, 4) || legacyBpfBackport) {
+             RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_GETSOCKOPT_PROG_PATH,
+                                         cg_fd, BPF_CGROUP_GETSOCKOPT));
+             RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_SETSOCKOPT_PROG_PATH,
+@@ -198,7 +199,7 @@ static Result<void> initPrograms(const char* cg2_path) {
+         }
+     }
+ 
+-    if (isAtLeastKernelVersion(4, 19)) {
++    if (isAtLeastKernelVersion(4, 19) || legacyBpfBackport) {
+         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_BIND4_PROG_PATH,
+                 cg_fd, BPF_CGROUP_INET4_BIND));
+         RETURN_IF_NOT_OK(attachProgramToCgroup(CGROUP_BIND6_PROG_PATH,
+@@ -213,14 +214,14 @@ static Result<void> initPrograms(const char* cg2_path) {
+         if (queryProgram(cg_fd, BPF_CGROUP_INET6_BIND) <= 0) abort();
+     }
+ 
+-    if (isAtLeastKernelVersion(5, 10)) {
++    if (isAtLeastKernelVersion(5, 10) || legacyBpfBackport) {
+         if (queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_RELEASE) <= 0) abort();
+     }
+ 
+     if (isAtLeastV) {
+         // V requires 4.19+, so technically this 2nd 'if' is not required, but it
+         // doesn't hurt us to try to support AOSP forks that try to support older kernels.
+-        if (isAtLeastKernelVersion(4, 19)) {
++        if (isAtLeastKernelVersion(4, 19) || legacyBpfBackport) {
+             if (queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
+             if (queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
+             if (queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0) abort();
+@@ -229,7 +230,7 @@ static Result<void> initPrograms(const char* cg2_path) {
+             if (queryProgram(cg_fd, BPF_CGROUP_UDP6_SENDMSG) <= 0) abort();
+         }
+ 
+-        if (isAtLeastKernelVersion(5, 4)) {
++        if (isAtLeastKernelVersion(5, 4) || legacyBpfBackport) {
+             if (queryProgram(cg_fd, BPF_CGROUP_GETSOCKOPT) <= 0) abort();
+             if (queryProgram(cg_fd, BPF_CGROUP_SETSOCKOPT) <= 0) abort();
+         }
+@@ -485,7 +486,8 @@ static void mapLockTest(void) {
+ 
+ Result<void> BpfHandler::initMaps() {
+     // bpfLock() requires bpfGetFdMapId which is only available on 4.14+ kernels.
+-    if (bpf::lockingEnabled && isAtLeastKernelVersion(4, 14)) mapLockTest();
++    if (bpf::lockingEnabled &&
++        (isAtLeastKernelVersion(4, 14) || bpf::hasLegacyBpfBackport())) mapLockTest();
+ 
+     RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
+     RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));
+diff --git a/bpf/progs/Android.bp b/bpf/progs/Android.bp
+index 4468c529ea..657d0617b9 100644
+--- a/bpf/progs/Android.bp
++++ b/bpf/progs/Android.bp
+@@ -82,10 +82,29 @@ cc_library_headers {
+     ],
+ }
+ 
++// Metadata for the actual 3.4 backport; default program sections are unchanged.
++soong_config_module_type {
++    name: "netbpfload_legacy_bpf_defaults_type",
++    module_type: "bpf_defaults",
++    config_namespace: "netbpfload",
++    bool_variables: ["legacy_kernel"],
++    properties: ["cflags"],
++}
++
++netbpfload_legacy_bpf_defaults_type {
++    name: "netbpfload_legacy_bpf_defaults",
++    soong_config_variables: {
++        legacy_kernel: {
++            cflags: ["-DNETBPFLOAD_LEGACY_BACKPORT=1"],
++        },
++    },
++}
++
+ //
+ // bpf kernel programs
+ //
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "clatd.o",
+     srcs: ["clatd.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -93,6 +112,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "dscpPolicy.o",
+     srcs: ["dscpPolicy.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -100,6 +120,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "dscpPolicy@funcs.o",
+     srcs: ["dscpPolicy@funcs.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -108,6 +129,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "netd.o",
+     srcs: ["netd.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -115,6 +137,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "netd@funcs.o",
+     srcs: ["netd@funcs.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -123,6 +146,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "offload.o",
+     srcs: ["offload.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+@@ -130,6 +154,7 @@ bpf {
+ }
+ 
+ bpf {
++    defaults: ["netbpfload_legacy_bpf_defaults"],
+     name: "test.o",
+     srcs: ["test.c"],
+     include_dirs: ["packages/modules/Connectivity/bpf/progs/include"],
+diff --git a/bpf/progs/clatd.c b/bpf/progs/clatd.c
+index 803fb3d9b4..230c6a6051 100644
+--- a/bpf/progs/clatd.c
++++ b/bpf/progs/clatd.c
+@@ -247,6 +247,18 @@ function int nat64(struct __sk_buff* skb,
+     return TC_ACT_PIPE;
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_BPF_PROG_KVER_RANGE(schedcls, ingress6_clat_ether, AID_SYSTEM, 3_4, 3_5)
++(struct __sk_buff* skb) {
++    return nat64(skb, ETHER, KVER_3_4);
++}
++
++DEFINE_BPF_PROG_KVER_RANGE(schedcls, ingress6_clat_rawip, AID_SYSTEM, 3_4, 3_5)
++(struct __sk_buff* skb) {
++    return nat64(skb, RAWIP, KVER_3_4);
++}
++#endif
++
+ DEFINE_BPF_PROG_KVER(schedcls, ingress6_clat_ether, AID_SYSTEM, 4_14)
+ (struct __sk_buff* skb) {
+     return nat64(skb, ETHER, KVER_4_14);
+diff --git a/bpf/progs/include/bpf_helpers.h b/bpf/progs/include/bpf_helpers.h
+index 997636e672..ffa58f1f78 100644
+--- a/bpf/progs/include/bpf_helpers.h
++++ b/bpf/progs/include/bpf_helpers.h
+@@ -30,6 +30,21 @@
+ struct kver_uint { unsigned int kver; };
+ #define KVER_(v) ((struct kver_uint){ .kver = (v) })
+ #define KVER(a, b, c) KVER_(((a) << 24) + ((b) << 16) + (c))
++#define KVER_3_4  KVER(3, 4, 0)
++#define KVER_3_5  KVER(3, 5, 0)
++
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++#define BPF_BASE_KVER 3_4
++#define BPF_BASE_KVER_VALUE KVER_3_4
++#define BPF_ADVANCED_KVER_VALUE KVER_3_4
++#define BPF_HAS_LEGACY_BACKPORT(kv) ((kv).kver == KVER_3_4.kver)
++#else
++#define BPF_BASE_KVER 4_9
++#define BPF_BASE_KVER_VALUE KVER_4_9
++#define BPF_ADVANCED_KVER_VALUE KVER_5_10
++#define BPF_HAS_LEGACY_BACKPORT(kv) false
++#endif
++
+ #define KVER_4_9  KVER(4, 9, 0)
+ #define KVER_4_14 KVER(4, 14, 0)
+ #define KVER_4_19 KVER(4, 19, 0)
+@@ -274,7 +289,7 @@ static long (*bpf_sk_storage_delete_unsafe) (const void* sk_storage,
+ #define DEFINE_BPF_RINGBUF_EXT(the_map, ValueType, size_bytes, usr, grp, md,   \
+                                selinux, pindir, min_api, max_api)              \
+     DEFINE_BPF_MAP_BASE(the_map, RINGBUF, 0, 0, size_bytes, usr, grp, md,      \
+-                        selinux, pindir, KVER_5_10, KVER_INF,                  \
++                        selinux, pindir, BPF_ADVANCED_KVER_VALUE, KVER_INF,                  \
+                         min_api, max_api, 0);                                  \
+     DEFINE_LIBBPF_RINGBUF(the_map, size_bytes);                                \
+                                                                                \
+@@ -312,7 +327,7 @@ static long (*bpf_sk_storage_delete_unsafe) (const void* sk_storage,
+                                   min_api, max_api, mapFlags)                           \
+     DEFINE_BPF_MAP_BASE(the_map, SK_STORAGE, sizeof(uint32_t), sizeof(ValueType),       \
+                         0, usr, grp, md, selinux, pindir,                               \
+-                        KVER_5_10, KVER_INF, min_api, max_api, mapFlags);               \
++                        BPF_ADVANCED_KVER_VALUE, KVER_INF, min_api, max_api, mapFlags);               \
+     DEFINE_LIBBPF_MAP(the_map, SK_STORAGE, uint32_t, ValueType, 0, mapFlags);           \
+     BPF_ANNOTATE_KV_PAIR(the_map, uint32_t, ValueType);                                 \
+                                                                                         \
+@@ -352,7 +367,7 @@ static long (*bpf_sk_storage_delete_unsafe) (const void* sk_storage,
+                            selinux, pindir, min_api, max_api, mapFlags)                          \
+   DEFINE_BPF_MAP_BASE(the_map, TYPE, sizeof(KeyType), sizeof(ValueType),                         \
+                       num_entries, usr, grp, md, selinux, pindir,                                \
+-                      KVER_4_9, KVER_INF, min_api, max_api, mapFlags);                           \
++                      BPF_BASE_KVER_VALUE, KVER_INF, min_api, max_api, mapFlags);                           \
+     DEFINE_LIBBPF_MAP(the_map, TYPE, KeyType, ValueType, num_entries, mapFlags);                 \
+     BPF_MAP_ASSERT_OK(BPF_MAP_TYPE_##TYPE, (num_entries), (md));                                 \
+     _Static_assert(sizeof(KeyType) < 1024, "aosp/2370288 requires < 1024 byte keys");            \
+@@ -584,4 +599,4 @@ static long (*bpf_trace_printk)(const char* fmt, int fmt_size, ...) = (void*) BP
+ 
+ // programs with no kernel version requirements
+ #define DEFINE_BPF_PROG(TYPE, NAME, prog_gid) \
+-    DEFINE_BPF_PROG_KVER(TYPE, NAME, prog_gid, 4_9)
++    DEFINE_BPF_PROG_KVER(TYPE, NAME, prog_gid, BPF_BASE_KVER)
+diff --git a/bpf/progs/netd.c b/bpf/progs/netd.c
+index e4cd7c93b4..919fdbd04d 100644
+--- a/bpf/progs/netd.c
++++ b/bpf/progs/netd.c
+@@ -177,7 +177,7 @@ DEFINE_BPF_MAP_RO_NETD(loopback_checks_enabled_map, ARRAY, uint32_t, bool, 1)
+ 
+ // programs that only need to be usable by the system server
+ #define DEFINE_SYS_BPF_PROG(TYPE, NAME) \
+-    DEFINE_BPF_PROG_EXT(TYPE, NAME, AID_ROOT, AID_NET_ADMIN, 4_9, INF, MINAPI, MAXAPI, MANDATORY, \
++    DEFINE_BPF_PROG_EXT(TYPE, NAME, AID_ROOT, AID_NET_ADMIN, BPF_BASE_KVER, INF, MINAPI, MAXAPI, MANDATORY, \
+                         "net_shared", DEFAULT_BPF_PIN_SUBDIR)
+ 
+ // tcpAccECN maps/programs need to load only on Android 26Q2+
+@@ -230,7 +230,7 @@ DEFINE_BPF_MAP_RO_NETD(loopback_checks_enabled_map, ARRAY, uint32_t, bool, 1)
+             value = bpf_##the_stats_map##_lookup_elem(key);                                      \
+         }                                                                                        \
+         if (value) {                                                                             \
+-            const bool is5_4 = KVER_IS_AT_LEAST(kver, 5, 4);                                     \
++            const bool is5_4 = (KVER_IS_AT_LEAST(kver, 5, 4) || BPF_HAS_LEGACY_BACKPORT(kver));                                     \
+             const int mtu = 1500;                                                                \
+             uint64_t packets = 1;                                                                \
+             uint64_t bytes = skb->len;                                                           \
+@@ -290,7 +290,7 @@ function long bpf_skb_load_bytes_net(const struct __sk_buff* const skb,
+     //
+     // For similar reasons this will fail with non-offloaded VLAN tags on < 4.19 kernels,
+     // since those extend the ethernet header from 14 to 18 bytes.
+-    return KVER_IS_AT_LEAST(kver, 4, 19)
++    return (KVER_IS_AT_LEAST(kver, 4, 19) || BPF_HAS_LEGACY_BACKPORT(kver))
+         ? bpf_skb_load_bytes_relative(skb, L3_off, to, len, BPF_HDR_START_NET)
+         : bpf_skb_load_bytes(skb, L3_off, to, len);
+ }
+@@ -331,7 +331,7 @@ function bool is_local_net_access_allowed_cached(struct __sk_buff *skb,
+     };
+ 
+     // Caching is enabled on kernel 5.10 and later, which supports BPF socket storage.
+-    if (!KVER_IS_AT_LEAST(kver, 5, 10)) {
++    if (!(KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver))) {
+         return is_local_net_access_allowed(&query_key, uid);
+     }
+ 
+@@ -404,7 +404,7 @@ function bool should_block_local_network_packets(const SkbIpPacketData *const pa
+                                                  const struct egress_bool egress,
+                                                  const struct kver_uint kver) {
+     bool reportLocalAccess = false;
+-    if (KVER_IS_AT_LEAST(kver, 5, 10)) {
++    if ((KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver))) {
+         uint32_t key = 0;
+         bool *noteOpEnabled = bpf_local_net_note_op_enabled_map_lookup_elem(&key);
+         reportLocalAccess = noteOpEnabled && *noteOpEnabled;
+@@ -710,7 +710,7 @@ function void do_packet_tracing(const struct __sk_buff* const skb,
+                                 const uint32_t uid,
+                                 const uint32_t tag,
+                                 const struct kver_uint kver) {
+-    if (!KVER_IS_AT_LEAST(kver, 5, 10)) return;
++    if (!(KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver))) return;
+ 
+     uint32_t mapKey = 0;
+     bool* traceConfig = bpf_packet_trace_enabled_map_lookup_elem(&mapKey);
+@@ -766,7 +766,7 @@ function bool ingress_should_discard(const SkbIpPacketData* const packet,
+     // Require 4.19, since earlier kernels don't have bpf_skb_load_bytes_relative() which
+     // provides relative to L3 header reads.  Without that we could fetch the wrong bytes.
+     // Additionally earlier bpf verifiers are much harder to please.
+-    if (!KVER_IS_AT_LEAST(kver, 4, 19)) return false;
++    if (!(KVER_IS_AT_LEAST(kver, 4, 19) || BPF_HAS_LEGACY_BACKPORT(kver))) return false;
+ 
+     if (packet->ip_version == 0) return false;
+ 
+@@ -916,7 +916,7 @@ function int bpf_traffic_account(struct __sk_buff* skb,
+     if (API_IS_AT_LEAST(lvl, 25Q2) && parsed && (match != DROP) && !dns) {
+         if (should_block_local_network_packets(&packet_data, skb, sock_uid,
+                                                skb->ifindex, egress, kver)) {
+-            if (KVER_IS_AT_LEAST(kver, 5, 10) && skb->sk && egress.egress) {
++            if ((KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver)) && skb->sk && egress.egress) {
+                 SkStorageValue *sks = bpf_sk_storage_get(skb->sk, 0, 0);
+                 if (sks) sks->dropReasons |= DROP_REASON_LNP;
+             }
+@@ -968,8 +968,25 @@ function int bpf_traffic_account(struct __sk_buff* skb,
+ //    T |  x  |  x   |  x   |  x  |  x   |  x   |     |     |      | (magic netbpfload)
+ //    S |  x  |  x   |  x   |  x  |  x   |      |     |     |      | (dns netbpfload for offload)
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++#define NETD_SOCK_ADDR_MIN_KVER 3_4
++#define NETD_RELEASE_MIN_KVER 3_4
++#else
++#define NETD_SOCK_ADDR_MIN_KVER 4_19
++#define NETD_RELEASE_MIN_KVER 5_10
++#endif
++
+ // ----- ingress/stats -----
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++// The real 3.4 kernel implements Android17's required network map/helper set.
++DEFINE_NETD_BPF_PROG_RANGES(ingress, stats, 3_4, 3_5, 26Q2, MAXAPI)
++(struct __sk_buff* skb) {
++    return bpf_traffic_account(skb, INGRESS, KVER_3_4, API(26Q2));
++}
++#endif
++
++
+ // Android 26Q2+ 6.18+ (full featured + without tcpAccECN)
+ DEFINE_NETD_BPF_PROG_RANGES(ingress, stats, 6_18, INF, 26Q2, MAXAPI)
+ (struct __sk_buff* skb) {
+@@ -1033,6 +1050,15 @@ DEFINE_NETD_BPF_PROG_RANGES(ingress, stats, 4_9, 4_19, T, V)
+ 
+ // ----- egress/stats -----
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++// The real 3.4 kernel implements Android17's required network map/helper set.
++DEFINE_NETD_BPF_PROG_RANGES(egress, stats, 3_4, 3_5, 26Q2, MAXAPI)
++(struct __sk_buff* skb) {
++    return bpf_traffic_account(skb, EGRESS, KVER_3_4, API(26Q2));
++}
++#endif
++
++
+ // Android 26Q2+ 6.1+ (full featured)
+ DEFINE_NETD_BPF_PROG_RANGES(egress, stats, 6_1, INF, 26Q2, MAXAPI)
+ (struct __sk_buff* skb) {
+@@ -1176,7 +1202,7 @@ function uint8_t get_app_permissions(uint32_t uid) {
+ function int inet_socket_create(struct bpf_sock* sk, const struct kver_uint kver) {
+     uint64_t gid_uid = bpf_get_current_uid_gid();
+ 
+-    if (KVER_IS_AT_LEAST(kver, 5, 10)) {
++    if ((KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver))) {
+         SkStorageValue *sks = bpf_sk_storage_get(sk, 0, BPF_SK_STORAGE_GET_F_CREATE);
+         if (sks) {
+             sks->cookie = bpf_get_sk_cookie(sk);
+@@ -1203,6 +1229,13 @@ function int inet_socket_create(struct bpf_sock* sk, const struct kver_uint kver
+     }
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_NETD_T_BPF_PROG_KVER_RANGE(cgroupsock, inet_create, 3_4, 3_5)
++(struct bpf_sock* sk) {
++    return inet_socket_create(sk, KVER_3_4);
++}
++#endif
++
+ DEFINE_NETD_T_BPF_PROG_KVER(cgroupsock, inet_create, 5_10)
+ (struct bpf_sock* sk) {
+     return inet_socket_create(sk, KVER_5_10);
+@@ -1213,7 +1246,7 @@ DEFINE_NETD_T_BPF_PROG_KVER_RANGE(cgroupsock, inet_create, 4_14, 5_10)
+     return inet_socket_create(sk, KVER_4_14);
+ }
+ 
+-DEFINE_NETD_T_BPF_PROG_KVER(cgroupsockrelease, inet_release, 5_10)
++DEFINE_NETD_T_BPF_PROG_KVER(cgroupsockrelease, inet_release, NETD_RELEASE_MIN_KVER)
+ (struct bpf_sock* sk) {
+     uint64_t cookie = bpf_get_sk_cookie(sk);
+     if (cookie) bpf_cookie_tag_map_delete_elem(&cookie);
+@@ -1324,6 +1357,13 @@ function int inet_bind(struct bpf_sock_addr *ctx, const struct kver_uint kver) {
+     return BPF_ALLOW;
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_NETD_T_BPF_PROG_KVER_RANGE(bind4, inet4_bind, 3_4, 3_5)
++(struct bpf_sock_addr *ctx) {
++    return inet_bind(ctx, KVER_3_4);
++}
++#endif
++
+ DEFINE_NETD_T_BPF_PROG_KVER(bind4, inet4_bind, 5_15)
+ (struct bpf_sock_addr *ctx) {
+     return inet_bind(ctx, KVER_5_15);
+@@ -1334,6 +1374,13 @@ DEFINE_NETD_T_BPF_PROG_KVER_RANGE(bind4, inet4_bind, 4_19, 5_15)
+     return inet_bind(ctx, KVER_4_19);
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_NETD_T_BPF_PROG_KVER_RANGE(bind6, inet6_bind, 3_4, 3_5)
++(struct bpf_sock_addr *ctx) {
++    return inet_bind(ctx, KVER_3_4);
++}
++#endif
++
+ DEFINE_NETD_T_BPF_PROG_KVER(bind6, inet6_bind, 5_15)
+ (struct bpf_sock_addr *ctx) {
+     return inet_bind(ctx, KVER_5_15);
+@@ -1346,36 +1393,36 @@ DEFINE_NETD_T_BPF_PROG_KVER_RANGE(bind6, inet6_bind, 4_19, 5_15)
+ 
+ // --- CONNECT CGROUP HOOKS ---
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(connect4, inet4_connect, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(connect4, inet4_connect, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(connect6, inet6_connect, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(connect6, inet6_connect, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+ 
+ // --- UDP RECVMSG HOOKS ---
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(recvmsg4, udp4_recvmsg, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(recvmsg4, udp4_recvmsg, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(recvmsg6, udp6_recvmsg, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(recvmsg6, udp6_recvmsg, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+ 
+ // --- UDP SENDMSG HOOKS ---
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(sendmsg4, udp4_sendmsg, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(sendmsg4, udp4_sendmsg, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+ 
+-DEFINE_NETD_BPF_PROG_RANGES(sendmsg6, udp6_sendmsg, 4_19, INF, V, MAXAPI)
++DEFINE_NETD_BPF_PROG_RANGES(sendmsg6, udp6_sendmsg, NETD_SOCK_ADDR_MIN_KVER, INF, V, MAXAPI)
+ (__unused struct bpf_sock_addr *ctx) {
+     return BPF_ALLOW;
+ }
+@@ -1385,7 +1432,7 @@ DEFINE_NETD_BPF_PROG_RANGES(sendmsg6, udp6_sendmsg, 4_19, INF, V, MAXAPI)
+ function int inet_getsockopt(struct bpf_sockopt *ctx,
+                              const struct kver_uint kver,
+                              const struct sdk_level_uint lvl) {
+-    SkStorageValue *sks = KVER_IS_AT_LEAST(kver, 5, 10) ? bpf_sk_storage_get(ctx->sk, 0, 0) : NULL;
++    SkStorageValue *sks = (KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver)) ? bpf_sk_storage_get(ctx->sk, 0, 0) : NULL;
+     uint8_t *optval_end = ctx->optval_end;
+     uint8_t *optval = ctx->optval;
+ 
+@@ -1408,7 +1455,7 @@ function int inet_getsockopt(struct bpf_sockopt *ctx,
+         return BPF_ALLOW;
+     }
+ 
+-    if (KVER_IS_AT_LEAST(kver, 5, 10)
++    if ((KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver))
+         && ctx->level == SOL_SOCKET
+         && ctx->optname == SO_ANDROID_DROP_REASON) {
+ 
+@@ -1429,6 +1476,13 @@ function int inet_getsockopt(struct bpf_sockopt *ctx,
+     return BPF_ALLOW;
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_NETD_BPF_PROG_RANGES(getsockopt, prog, 3_4, 3_5, V, MAXAPI)
++(struct bpf_sockopt *ctx) {
++    return inet_getsockopt(ctx, KVER_3_4, API(26Q2));
++}
++#endif
++
+ DEFINE_NETD_BPF_PROG_RANGES(getsockopt, prog, 6_18, INF, V, MAXAPI)
+ (struct bpf_sockopt *ctx) {
+     return inet_getsockopt(ctx, KVER_6_18, API(V));
+@@ -1459,7 +1513,7 @@ DEFINE_NETD_BPF_PROG_RANGES(getsockopt, prog, 5_4, 5_10, V, MAXAPI)
+ function int inet_setsockopt(struct bpf_sockopt *ctx,
+                              const struct kver_uint kver,
+                              const struct sdk_level_uint lvl) {
+-    SkStorageValue *sks = KVER_IS_AT_LEAST(kver, 5, 10) ? bpf_sk_storage_get(ctx->sk, 0, 0) : NULL;
++    SkStorageValue *sks = (KVER_IS_AT_LEAST(kver, 5, 10) || BPF_HAS_LEGACY_BACKPORT(kver)) ? bpf_sk_storage_get(ctx->sk, 0, 0) : NULL;
+     uint8_t *optval_end = ctx->optval_end;
+     uint8_t *optval = ctx->optval;
+ 
+@@ -1487,6 +1541,13 @@ function int inet_setsockopt(struct bpf_sockopt *ctx,
+     return BPF_ALLOW;
+ }
+ 
++#if defined(NETBPFLOAD_LEGACY_BACKPORT)
++DEFINE_NETD_BPF_PROG_RANGES(setsockopt, prog, 3_4, 3_5, V, MAXAPI)
++(struct bpf_sockopt *ctx) {
++    return inet_setsockopt(ctx, KVER_3_4, API(26Q2));
++}
++#endif
++
+ DEFINE_NETD_BPF_PROG_RANGES(setsockopt, prog, 6_18, INF, V, MAXAPI)
+ (struct bpf_sockopt *ctx) {
+     return inet_setsockopt(ctx, KVER_6_18, API(V));
+-- 
+2.53.0
+
