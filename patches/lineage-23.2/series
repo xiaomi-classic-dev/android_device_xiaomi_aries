@@ -1,4 +1,5 @@
 bionic/0001-linker-Admit-scoped-MiOne-non-PIE-daemons-in-the-standard-ARM-li.patch
+build-make/0001-build-Generate-canonical-ramdisk-metadata-before-recovery-resour.patch
 frameworks-base/0001-BluetoothPowerStatsCollector-Retain-service-unbound-regression-o.patch
 frameworks-base/0002-TelephonyRegistry-Check-mapped-phone-id-before-updating-NTN-sign.patch
 hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-with-a-compatible-HAL-table.patch

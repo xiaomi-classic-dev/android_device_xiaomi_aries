@@ -29,8 +29,16 @@
       "path": "build/make",
       "base_commit": "4ec2058b44bd5032ec38e4a43fa70d163ba2326b",
       "baseline_tree": "8b8e0505f7f744ce5f062f5645a6583cb803a4e4",
-      "patches": [],
-      "source_head": "4ec2058b44bd5032ec38e4a43fa70d163ba2326b"
+      "patches": [
+        {
+          "file": "build-make/0001-build-Generate-canonical-ramdisk-metadata-before-recovery-resour.patch",
+          "source_commit": "f5899679b08fd81383b0b616d150a1b60bc605b6",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "d7646721cd49d0e905b97e8d8511352dac007656",
+          "sha256": "a3fbcd9012383f0591d792982a6c703f1983f76d35a13840a2a3aace0e6fe44f"
+        }
+      ],
+      "source_head": "f5899679b08fd81383b0b616d150a1b60bc605b6"
     },
     {
       "path": "build/soong",
@@ -382,5 +390,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 11
+  "mione_platform_increment_count": 12
 }

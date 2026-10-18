@@ -1,0 +1,31 @@
+From f5899679b08fd81383b0b616d150a1b60bc605b6 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 15:23:19 +0800
+Subject: [PATCH] build: Generate canonical ramdisk metadata before recovery
+ resources
+
+Non-A/B target-files built full recovery resources before the BOOT and
+RECOVERY filesystem configs existed. mkbootfs silently used defaults,
+then AddImages built canonical images with different directory metadata.
+Generate the same configs before make_recovery_patch so the embedded
+and final recovery images use identical complete CPIO metadata.
+
+Change-Id: I491de79de11ca2720b7f12de333834d48aa583e4
+---
+ core/Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/core/Makefile b/core/Makefile
+index b8c418940c..58f0608a7a 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -6923,6 +6923,9 @@ ifneq ($(PRODUCT_SYSTEM_DLKM_BASE_FS_PATH),)
+ endif
+ ifeq ($(TARGET_OTA_ALLOW_NON_AB),true)
+ ifneq ($(INSTALLED_RECOVERYIMAGE_TARGET),)
++	@# Recovery resources and later IMAGES must use identical canonical ramdisk metadata.
++	$(hide) $(call fs_config,$(zip_root)/BOOT/RAMDISK,) > $(zip_root)/META/boot_filesystem_config.txt
++	$(hide) $(call fs_config,$(zip_root)/RECOVERY/RAMDISK,) > $(zip_root)/META/recovery_filesystem_config.txt
+ 	$(hide) PATH=$(INTERNAL_USERIMAGES_BINARY_PATHS):$$PATH MKBOOTIMG=$(MKBOOTIMG) \
+ 	    $(MAKE_RECOVERY_PATCH) $(zip_root) $(zip_root)
+ endif
