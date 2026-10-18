@@ -1,0 +1,42 @@
+From 087d49da4ed86c9e050da6252767d184340c29b8 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 17:17:25 +0800
+Subject: [PATCH] init: Install BoringSSL import aliases as regular
+ configuration files
+
+Change-Id: Ia6dc1bebeb3f20357b6d43eb2984ccdabac9d427
+---
+ rootdir/Android.bp | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/rootdir/Android.bp b/rootdir/Android.bp
+index 45287775d..5c6f9991b 100644
+--- a/rootdir/Android.bp
++++ b/rootdir/Android.bp
+@@ -20,12 +20,25 @@ prebuilt_etc {
+     name: "init.boringssl.zygote64_32.rc",
+     src: "init.boringssl.zygote64_32.rc",
+     sub_dir: "init/hw",
+-    symlinks: [
++    required: [
+         "init.boringssl.zygote32.rc",
+         "init.boringssl.no_zygote.rc",
+     ],
+ }
+ 
++// Init imports use O_NOFOLLOW, so every imported configuration must be a file.
++prebuilt_etc {
++    name: "init.boringssl.zygote32.rc",
++    src: "init.boringssl.zygote64_32.rc",
++    sub_dir: "init/hw",
++}
++
++prebuilt_etc {
++    name: "init.boringssl.no_zygote.rc",
++    src: "init.boringssl.zygote64_32.rc",
++    sub_dir: "init/hw",
++}
++
+ prebuilt_etc {
+     name: "init.boringssl.zygote64.rc",
+     src: "init.boringssl.zygote64.rc",

@@ -36,6 +36,12 @@
       "patches": []
     },
     {
+      "path": "external/boringssl",
+      "base_commit": "1e3b727981831886a0910cd9e82d5bbee4cc7029",
+      "baseline_tree": "a9040469ad2e62b644ac12c204d432f603945eb7",
+      "patches": []
+    },
+    {
       "path": "external/jemalloc_new",
       "base_commit": "00d197c6bb93aa2620db1da58b1a2fabef1f57f5",
       "baseline_tree": "efd8a2c56889896834abfa6f870b4573b816149e",

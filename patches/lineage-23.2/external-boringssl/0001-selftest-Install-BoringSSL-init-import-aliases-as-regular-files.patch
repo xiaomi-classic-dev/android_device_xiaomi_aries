@@ -1,0 +1,42 @@
+From 47934f58da87e9fb215eeffba729fed558b24fdd Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 17:17:26 +0800
+Subject: [PATCH] selftest: Install BoringSSL init import aliases as regular
+ files
+
+Change-Id: Ib3c37c8b2bd8b7edbbc0a443386ac3272056234b
+---
+ selftest/Android.bp | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/selftest/Android.bp b/selftest/Android.bp
+index 1894963a..77642cae 100644
+--- a/selftest/Android.bp
++++ b/selftest/Android.bp
+@@ -75,12 +75,25 @@ prebuilt_etc {
+     name: "boringssl_self_test.zygote64_32.rc",
+     src: "boringssl_self_test.zygote64_32.rc",
+     vendor: true,
+-    symlinks: [
++    required: [
+         "boringssl_self_test.zygote32.rc",
+         "boringssl_self_test.no_zygote.rc",
+     ],
+ }
+ 
++// Init imports use O_NOFOLLOW, so every imported configuration must be a file.
++prebuilt_etc {
++    name: "boringssl_self_test.zygote32.rc",
++    src: "boringssl_self_test.zygote64_32.rc",
++    vendor: true,
++}
++
++prebuilt_etc {
++    name: "boringssl_self_test.no_zygote.rc",
++    src: "boringssl_self_test.zygote64_32.rc",
++    vendor: true,
++}
++
+ prebuilt_etc {
+     name: "boringssl_self_test.zygote64.rc",
+     src: "boringssl_self_test.zygote64.rc",
