@@ -9,3 +9,7 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 
 # Explicit ARM32 opt-in; keep the actual kernel release for ELF selection.
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += ro.bpf.allow_32bit=true
+
+# Share the platform HIDL registry for passthrough HALs and expose the
+# platform AudioSystem client required by the legacy Qualcomm RIL.
+PRODUCT_VENDOR_PROPERTIES += ro.vendor.aries.legacy_linker=true
