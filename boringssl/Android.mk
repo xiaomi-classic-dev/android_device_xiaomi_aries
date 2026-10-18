@@ -16,8 +16,11 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_ETC)
 LOCAL_MODULE_STEM := aries-boringssl-init-configs
 LOCAL_SRC_FILES := regular-init-imports.txt
 LOCAL_REQUIRED_MODULES := init.boringssl.zygote64_32.rc boringssl_self_test.zygote64_32.rc
-LOCAL_ADDITIONAL_DEPENDENCIES := $(aries_boringssl_imports) $(LOCAL_PATH)/materialize-init-imports.py
 LOCAL_POST_INSTALL_CMD := /usr/bin/python3 $(LOCAL_PATH)/materialize-init-imports.py $(PRODUCT_OUT) $(TARGET_OUT_ETC)/aries-boringssl-init-configs
 include $(BUILD_PREBUILT)
+
+# Only the installation consumes these aliases. Attaching them to the copied
+# prebuilt intermediate would make it perpetually older than the converted rc.
+$(LOCAL_INSTALLED_MODULE): $(aries_boringssl_imports) $(LOCAL_PATH)/materialize-init-imports.py
 
 aries_boringssl_imports :=
