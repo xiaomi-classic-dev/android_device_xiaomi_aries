@@ -216,6 +216,12 @@
       "patches": []
     },
     {
+      "path": "system/linkerconfig",
+      "base_commit": "12743643593c9f13784ed30424db2ea09a7bc65f",
+      "baseline_tree": "868c8ffb7df1c91c6acb00d9fbd640c69007f17c",
+      "patches": []
+    },
+    {
       "path": "system/logging",
       "base_commit": "e63321648d4f2cb7c437bd615366e8f8765ad2bc",
       "baseline_tree": "e86330f8efe96020ef9ee69b350711ce29d6c7af",

@@ -1,0 +1,39 @@
+From 0cec287dd1b7f8cfb4d4c16299ddcb46a579dd01 Mon Sep 17 00:00:00 2001
+From: GuaiYiHu <guaiyihu@foxmail.com>
+Date: Sun, 18 Oct 2026 16:14:15 +0800
+Subject: [PATCH] linkerconfig: Scope legacy Aries HIDL and RIL links to their
+ existing namespaces
+
+Change-Id: I3af2019ce0a310246da5700e599cf28bf31cf218
+---
+ contents/common/system_links.cc | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/contents/common/system_links.cc b/contents/common/system_links.cc
+index 47bcea8..32e4f09 100644
+--- a/contents/common/system_links.cc
++++ b/contents/common/system_links.cc
+@@ -43,9 +43,23 @@ using android::linkerconfig::modules::Section;
+ 
+ void AddStandardSystemLinks(const Context& ctx, Section* section) {
+   const bool debuggable = android::base::GetBoolProperty("ro.debuggable", false);
++  const bool legacy_aries = android::base::GetBoolProperty(
++      "ro.vendor.aries.legacy_linker", false);
+   const std::string system_ns_name = ctx.GetSystemNamespaceName();
+   const bool is_section_vndk_enabled = ctx.IsSectionVndkEnabled();
+   section->ForEachNamespaces([&](Namespace& ns) {
++    if (legacy_aries && ctx.IsDefaultConfig()) {
++      // A passthrough HAL must register its Bn constructors in the same HIDL
++      // registry that the framework Java HwBinder bridge consults.
++      if (ctx.IsSystemSection() && ns.GetName() == "sphal") {
++        ns.GetLink(system_ns_name).AddSharedLib("libhidlbase.so");
++      }
++      // The extracted Qualcomm RIL imports the platform AudioSystem ABI.
++      // Keep the remaining vendor namespace isolated and its own libraries.
++      if (ctx.IsVendorSection() && ns.GetName() == "default") {
++        ns.GetLink(system_ns_name).AddSharedLib("libaudioclient.so");
++      }
++    }
+     if (ns.GetName() != system_ns_name) {
+       ns.GetLink(system_ns_name).AddSharedLib(kBionicLibs);
+       if (!is_section_vndk_enabled || ns.GetName() != "default") {

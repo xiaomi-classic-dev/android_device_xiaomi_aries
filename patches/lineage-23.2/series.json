@@ -333,6 +333,21 @@
       "source_head": "fa09c9bdeb5c55770dd251aba6e70d3df8c3ade4"
     },
     {
+      "path": "system/linkerconfig",
+      "base_commit": "12743643593c9f13784ed30424db2ea09a7bc65f",
+      "baseline_tree": "868c8ffb7df1c91c6acb00d9fbd640c69007f17c",
+      "patches": [
+        {
+          "file": "system-linkerconfig/0001-linkerconfig-Scope-legacy-Aries-HIDL-and-RIL-links-to-their-exis.patch",
+          "source_commit": "0cec287dd1b7f8cfb4d4c16299ddcb46a579dd01",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "aeb297fbc59e0225a6f96d4e89c54bcb82456e66",
+          "sha256": "37a4e00418b5e27467dc9702aa541c3abb9d19fca411fa2c2cf0b6d9aa7d59d9"
+        }
+      ],
+      "source_head": "0cec287dd1b7f8cfb4d4c16299ddcb46a579dd01"
+    },
+    {
       "path": "system/logging",
       "base_commit": "e63321648d4f2cb7c437bd615366e8f8765ad2bc",
       "baseline_tree": "e86330f8efe96020ef9ee69b350711ce29d6c7af",
@@ -390,5 +405,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 12
+  "mione_platform_increment_count": 13
 }
