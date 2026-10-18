@@ -7,4 +7,5 @@ packages-modules-Bluetooth/0001-Bluetooth-Retain-classic-only-controllers-with-A
 packages-modules-Bluetooth/0002-Bluetooth-Bind-LE-feature-completion-promise-before-the-HCI-even.patch
 packages-modules-Connectivity/0001-NetBpfLoad-Admit-opted-in-Aries-and-MiOne-Linux-3.4-BPF-backport.patch
 packages-modules-Connectivity/0002-bpf-Select-the-real-Linux-3.4-network-backport-by-product-capabi.patch
+system-core/0001-libprocessgroup-Negotiate-cpuset-mounts-on-opted-in-legacy-produ.patch
 system-sepolicy/0001-sepolicy-allow-non-Treble-audioserver-to-publish-the-HIDL-audio-.patch

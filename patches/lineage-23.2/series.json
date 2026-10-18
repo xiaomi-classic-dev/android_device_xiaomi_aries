@@ -299,8 +299,16 @@
       "path": "system/core",
       "base_commit": "d53fabe32ac548bec83b5c489a8fcfe24fa076fe",
       "baseline_tree": "201008273cb0f7edba2dbb97ff3f9db459fbefc5",
-      "patches": [],
-      "source_head": "d53fabe32ac548bec83b5c489a8fcfe24fa076fe"
+      "patches": [
+        {
+          "file": "system-core/0001-libprocessgroup-Negotiate-cpuset-mounts-on-opted-in-legacy-produ.patch",
+          "source_commit": "719ddc8544d49aed6294366cf5b928e95fd62007",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "7347761f47602cb659bcdc3f5bd7134f7e5792cd",
+          "sha256": "463c7356b9cc9f8a4602fbf91f3de5bd9f4da24e3bded07b8cb605d5a04e65d9"
+        }
+      ],
+      "source_head": "719ddc8544d49aed6294366cf5b928e95fd62007"
     },
     {
       "path": "system/libhidl",
@@ -374,5 +382,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 10
+  "mione_platform_increment_count": 11
 }
