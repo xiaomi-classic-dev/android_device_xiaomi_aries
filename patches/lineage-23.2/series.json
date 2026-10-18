@@ -242,9 +242,16 @@
           "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
           "patch_id": "f8411d9e0133ebe67bcaea9c1b799cc66b676f29",
           "sha256": "6aa5785fa6e2d3a5ba456ae6643eaa69387a3698edc0ce57785146a2f2f3b401"
+        },
+        {
+          "file": "packages-modules-Connectivity/0002-bpf-Select-the-real-Linux-3.4-network-backport-by-product-capabi.patch",
+          "source_commit": "288e45b1c5d1ec6d03f007b277c0940e43d7a8d9",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "d94740856cd53d52680a8aaf97d395a001c6ce14",
+          "sha256": "35cf2cad60a9de26932b5ceca293df6097fca8ae77dc075b135bb0d7180ef21c"
         }
       ],
-      "source_head": "d1a66d463f85ff5bff054b34a88451aaa7f00282"
+      "source_head": "288e45b1c5d1ec6d03f007b277c0940e43d7a8d9"
     },
     {
       "path": "packages/modules/NetworkStack",
@@ -367,5 +374,5 @@
       "source_head": "200473174b7653cf2675e82b195f56a0ed7dfb66"
     }
   ],
-  "mione_platform_increment_count": 9
+  "mione_platform_increment_count": 10
 }
