@@ -17,6 +17,9 @@ PRODUCT_SHIPPING_API_LEVEL := 16
 # Retain the WebView version validated with the legacy Adreno driver.
 PRODUCT_PACKAGES += aries_webview
 
+# Materialize the platform BoringSSL rc aliases for init's O_NOFOLLOW imports.
+PRODUCT_PACKAGES += aries_boringssl_init_configs
+
 # Audio
 PRODUCT_PACKAGES += \
     audio_amplifier.msm8960
