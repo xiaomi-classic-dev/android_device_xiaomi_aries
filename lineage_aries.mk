@@ -48,3 +48,6 @@ PRODUCT_DEFAULT_APEX_PAYLOAD_TYPE := ext4
 
 # Clear the inherited disable flag: any nonempty value, including false, is true.
 PRODUCT_NOT_DEBUGGABLE_IN_USERDEBUG :=
+
+# This kernel has no userfaultfd. Build boot images with the supported CC GC.
+PRODUCT_ENABLE_UFFD_GC := false
