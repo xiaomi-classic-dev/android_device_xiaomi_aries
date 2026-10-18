@@ -50,3 +50,6 @@ TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)
 
 # Admit only this product to the real Linux 3.4 BPF loader backport.
 $(call soong_config_set,netbpfload,legacy_kernel,true)
+
+# The real 3.4 cpuset parser predates cpuset_v2_mode.
+$(call soong_config_set,libprocessgroup,legacy_cpuset_mount,true)
