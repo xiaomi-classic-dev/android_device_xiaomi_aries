@@ -1,0 +1,12 @@
+// Copyright (C) 2026 The LineageOS Project
+// SPDX-License-Identifier: Apache-2.0
+cc_binary {
+    name: "android.hardware.health@2.1-service.aries",
+    vendor: true,
+    compile_multilib: "32",
+    defaults: ["android.hardware.health@2.1-impl-defaults"],
+    srcs: ["service.cpp"],
+    init_rc: ["android.hardware.health@2.1-service.rc"],
+    vintf_fragments: ["android.hardware.health@2.1.xml"],
+    overrides: ["android.hardware.health@2.1-service", "healthd"],
+}

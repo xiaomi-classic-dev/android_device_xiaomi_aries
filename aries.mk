@@ -47,6 +47,7 @@ PRODUCT_COPY_FILES += \
 # Device services using actual legacy-kernel interfaces.
 PRODUCT_PACKAGES += \
     android.hardware.gnss@1.0-service.aries \
+    android.hardware.health@2.1-service.aries \
     android.hardware.power-service.aries \
     android.hardware.thermal@2.0-service.aries
 

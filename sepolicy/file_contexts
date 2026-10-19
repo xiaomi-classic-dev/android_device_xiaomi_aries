@@ -5,3 +5,4 @@
 /(vendor|system/vendor)/bin/hw/android\.hardware\.thermal@2\.0-service\.aries    u:object_r:hal_thermal_default_exec:s0
 
 /(vendor|system/vendor)/bin/hw/android\.hardware\.gnss@1\.0-service\.aries    u:object_r:hal_gnss_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.health@2\.1-service\.aries    u:object_r:hal_health_default_exec:s0
