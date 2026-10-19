@@ -1,0 +1,3 @@
+# The legacy AGPS client receives netmgr multicast events on NETLINK_GENERIC.
+allow hal_gnss_default self:capability net_admin;
+allow hal_gnss_default self:netlink_generic_socket create_socket_perms_no_ioctl;
