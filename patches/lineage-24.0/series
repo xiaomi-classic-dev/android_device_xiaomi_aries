@@ -4,6 +4,7 @@ frameworks-base/0001-TelephonyRegistry-Validate-the-mapped-phone-before-writing-
 hardware-broadcom-wlan/0001-bcmdhd-Register-RTT-v4-only-when-the-current-HAL-table-has-the-slots.patch
 hardware-broadcom-wlan/0002-bcmdhd-Retain-exact-legacy-BTCOEXMODE-setter-success-semantics.patch
 hardware-interfaces/0001-vintf-Retain-the-complete-FCM-6-contract-for-legacy-products.patch
+hardware-interfaces/0002-vintf-Retain-frozen-HIDL-definitions-required-by-the-complete-FCM-6.patch
 hardware-qcom-caf-wlan/0001-wifi-Select-the-qcwcn-config-only-on-qcwcn-boards.patch
 kernel-configs/0001-Retain-Android-S-4.14-requirements-for-explicitly-selected-FCM-6.patch
 packages-modules-Bluetooth/0001-Bluetooth-Retain-classic-only-controllers-with-current-Android-17-managers.patch

@@ -81,8 +81,8 @@
       "path": "hardware/interfaces",
       "base_commit": "6d5a0fb2592fc2b01a9333f1e70b3da036aca6da",
       "baseline_tree": "4e7b74aa2078f2e51b9b20eeb3d31f52a559f702",
-      "source_head": "96759e97fb1f6ab195838f44ebf2b1771fb09795",
-      "patched_tree": "bcbaf2d15ecbccb7a4e490cb3d1299ec2994efee",
+      "source_head": "d4083c4f81d1a76602d20d713d947a4aae143cf7",
+      "patched_tree": "b660595cef8615ee1f5d65d90b3c038173fb0806",
       "patches": [
         {
           "file": "hardware-interfaces/0001-vintf-Retain-the-complete-FCM-6-contract-for-legacy-products.patch",
@@ -90,6 +90,13 @@
           "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
           "patch_id": "def612f3870cdd0cd6963b634658e48d936ce461",
           "sha256": "dc8a72e33d405269fc49a7abfab93f9ab4cf87885e3933d7ecbeca7a27de1e5a"
+        },
+        {
+          "file": "hardware-interfaces/0002-vintf-Retain-frozen-HIDL-definitions-required-by-the-complete-FCM-6.patch",
+          "source_commit": "d4083c4f81d1a76602d20d713d947a4aae143cf7",
+          "source_author": "GuaiYiHu <guaiyihu@foxmail.com>",
+          "patch_id": "b98c711b2dbc614314458be994e60f30e715ffb7",
+          "sha256": "a9f2b80659cdb8acace71d2cc411040e2f51e994313baf11722927dcb8ab006c"
         }
       ]
     },
@@ -229,5 +236,5 @@
       ]
     }
   ],
-  "local_increment_count": 15
+  "local_increment_count": 16
 }
