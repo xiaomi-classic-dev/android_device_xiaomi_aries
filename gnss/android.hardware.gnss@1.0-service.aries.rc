@@ -3,5 +3,3 @@ service vendor.gnss_aries /vendor/bin/hw/android.hardware.gnss@1.0-service.aries
     class hal
     user gps
     group system gps radio
-    # The 3.4 kernel requires this for libnetmgr's multicast group membership.
-    capabilities NET_ADMIN
