@@ -6,7 +6,7 @@ cc_binary {
     compile_multilib: "32",
     defaults: ["android.hardware.health@2.1-impl-defaults"],
     srcs: ["service.cpp"],
-    init_rc: ["android.hardware.health@2.1-service.rc"],
-    vintf_fragments: ["android.hardware.health@2.1.xml"],
+    init_rc: ["android.hardware.health@2.1-service.aries.rc"],
+    vintf_fragments: ["android.hardware.health@2.1-service.aries.xml"],
     overrides: ["android.hardware.health@2.1-service", "healthd"],
 }
